@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://atalho.ia.br/sitemap.xml
