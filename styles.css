@@ -1,8 +1,10 @@
 /* ==========================================================
-   Atalho IA · site v2
-   Conceito: o site é um teclado. A paleta de comando é a vitrine,
-   o feixe laranja é a seta do símbolo (o atalho) e o pontilhado
-   é o caminho longo. Visual escuro e único, com uma faixa Areia.
+   Atalho IA · site v3 (26/11/2026; a v2 está em _versoes-antigas/site-v2)
+   Conceito: o site é um teclado. No topo, o logo vira a cena (palco.js):
+   o pontilhado é o caminho longo e a seta laranja é o atalho.
+   Os rótulos das seções são teclas com o atalho real, e o trilho
+   lateral (trilho.js) refaz o caminho durante a leitura.
+   Visual escuro e único, com uma faixa Areia.
    Regra da marca: texto laranja só sobre Tinta; sobre Areia,
    o laranja aparece apenas em formas.
    ========================================================== */
@@ -135,14 +137,7 @@ kbd {
   filter: blur(48px); opacity: 1; animation: respira 9s ease-in-out infinite;
 }
 @keyframes respira { 50% { opacity: .7; scale: 1.04 1.15; } }
-/* o caminho longo: desenhado na mesma grade de 26px dos pontos do fundo,
-   para os pontos coincidirem exatamente */
-.hero__caminho { position: absolute; inset: 0; mask-image: linear-gradient(180deg, #000 60%, transparent 95%); -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent 95%); }
-.rota { position: absolute; display: block; background-image: radial-gradient(rgba(138, 151, 171, .6) 1.7px, transparent 2.1px); background-size: 26px 26px; }
-.rota--v { width: 26px; }
-.rota--h { height: 26px; }
-
-.hero__in { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.hero__in { display: flex; flex-direction: column; align-items: flex-start; }
 .selo {
   display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 10px; border-radius: 999px;
   border: 1px solid var(--linha-2); background: rgba(15, 27, 45, .6); font-size: 13.5px; color: var(--texto-2);
@@ -150,23 +145,54 @@ kbd {
 .selo__ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--laranja); box-shadow: 0 0 0 4px rgba(255, 106, 43, .18); animation: pulsa 2.4s ease-in-out infinite; }
 @keyframes pulsa { 50% { box-shadow: 0 0 0 8px rgba(255, 106, 43, 0); } }
 
-.hero__titulo { margin-top: 26px; font-size: clamp(42px, 7.2vw, 96px); letter-spacing: -0.055em; line-height: .94; }
-.hero__titulo .linha { display: block; }
-.linha--suave {
-  background: linear-gradient(180deg, var(--texto) 0%, var(--nevoa) 120%); -webkit-background-clip: text; background-clip: text; color: transparent;
-  opacity: .9;
-}
-.js .hero__titulo .linha { opacity: 0; translate: 0 22px; filter: blur(8px); animation: surge .9s cubic-bezier(.2,.7,.2,1) forwards; }
-.js .hero__titulo .linha--suave { animation-delay: .12s; }
-@keyframes surge { to { opacity: 1; translate: 0 0; filter: blur(0); } }
-.js .hero__titulo .linha--suave { animation-name: surge2; }
-@keyframes surge2 { to { opacity: .9; translate: 0 0; filter: blur(0); } }
+/* Sem JS, o título aparece normal; com o palco desenhado, ele fica só para leitores de tela */
+.hero__h1 { margin-top: 26px; max-width: 980px; font-size: clamp(42px, 7.2vw, 96px); letter-spacing: -0.055em; line-height: .94; }
+.palco-pronto .hero__h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
 
+/* ---------- Palco: o logo como cena ---------- */
+.palco { position: relative; width: 100%; margin-top: clamp(28px, 4vw, 44px); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.palco__svg { width: 100%; height: auto; overflow: visible; }
+.p-revela { fill: none; stroke: #fff; stroke-width: 60px; stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.p-longo { fill: none; stroke: var(--nevoa); stroke-linecap: round; opacity: .75; }
+.p-rot-longo { font-family: var(--f-mono); fill: var(--nevoa); letter-spacing: .02em; }
+.p-est circle { fill: var(--fundo); stroke: var(--nevoa); stroke-width: 3px; }
+.p-est text { font-family: var(--f-mono); fill: var(--texto-2); }
+.p-atalho { stroke: var(--laranja); stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.p-brilho { stroke: var(--laranja); stroke-linecap: round; opacity: .3; filter: blur(16px); }
+.p-ponta { fill: none; stroke: var(--laranja); stroke-linecap: round; stroke-linejoin: round; }
+.p-inicio { fill: var(--laranja); }
+.p-grande { font-family: var(--f-display); font-weight: 700; letter-spacing: -0.045em; fill: var(--texto); }
+.p-curto { font-family: var(--f-display); font-weight: 500; letter-spacing: -0.03em; fill: var(--texto); }
+
+/* A sequência: o pontilhado percorre o L, as tarefas acendem uma a uma,
+   e então a seta corta direto. É o único movimento automático do topo. */
+.palco.anima .p-revela { animation: p-desenha 1.35s .25s cubic-bezier(.45,0,.55,1) both; }
+.palco.anima .p-est { animation: p-surge .35s var(--d) ease-out both; }
+.palco.anima .p-rot-longo { animation: p-surge .5s .2s ease-out both; }
+.palco.anima .p-problema, .palco.anima .p-inicio { animation: p-surge .6s 0s ease-out both; }
+.palco.anima .p-atalho { animation: p-desenha .42s 1.75s cubic-bezier(.7,0,.25,1) both; }
+.palco.anima .p-brilho { animation: p-brilha 1.2s 1.8s ease-out both; }
+.palco.anima .p-ponta { animation: p-surge .25s 2.12s ease-out both; }
+.palco.anima .p-curto { animation: p-surge .6s 2.15s ease-out both; }
+.palco.anima .p-solucao { animation: p-surge .6s 2.2s ease-out both; }
+.palco.anima .p-longo-g { animation: p-apaga .8s 2.3s ease-out both; }
+.palco.fim .p-longo-g { opacity: .55; }
+@keyframes p-desenha { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes p-surge { from { opacity: 0; } to { opacity: 1; } }
+@keyframes p-brilha { 0% { opacity: 0; } 35% { opacity: .75; } 100% { opacity: .3; } }
+@keyframes p-apaga { from { opacity: 1; } to { opacity: .55; } }
+
+.hero__base { display: flex; flex-direction: column; align-items: flex-start; width: 100%; }
 .hero__sub { margin-top: 26px; max-width: 600px; font-size: clamp(17px, 1.5vw, 19px); color: var(--texto-2); }
+/* No computador, o texto e a caixa sobem para o triângulo livre, abaixo da seta */
+@media (min-width: 1024px) {
+  .palco-pronto .hero__base { width: 46%; margin-left: auto; margin-top: -21%; position: relative; }
+  .palco-pronto .hero__sub { margin-top: 0; }
+}
 
 /* Paleta de comando */
 .paleta {
-  position: relative; width: 100%; max-width: 680px; margin-top: 40px; text-align: left;
+  position: relative; width: 100%; max-width: 680px; margin-top: 28px; text-align: left;
   background: rgba(15, 27, 45, .78); border: 1px solid var(--linha-2); border-radius: 20px;
   backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 30px 80px rgba(0, 0, 0, .5), 0 0 0 1px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.06);
@@ -214,7 +240,7 @@ kbd {
 .paleta__rodape span { display: inline-flex; align-items: center; gap: 6px; }
 .paleta__rodape kbd { height: 20px; min-width: 20px; font-size: 10.5px; }
 
-.hero__provas { list-style: none; margin: 34px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 28px; font-size: 12.5px; color: var(--texto-2); }
+.hero__provas { list-style: none; margin: 26px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 12.5px; color: var(--texto-2); }
 .hero__provas li { display: inline-flex; align-items: center; gap: 9px; }
 .hero__provas li::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--laranja); }
 
@@ -224,11 +250,10 @@ kbd {
   .selo { font-size: 12.5px; }
   .hero__feixe { animation: none; filter: blur(36px); }
   .btn { white-space: nowrap; }
-  .hero__titulo { font-size: clamp(38px, 11vw, 48px); }
+  .hero__h1 { font-size: clamp(38px, 11vw, 48px); }
   .item { grid-template-columns: 30px 1fr; }
   .item__txt b, .item__txt small { white-space: normal; }
-  .hero__caminho { display: none; }
-  .hero__provas { flex-direction: column; align-items: center; gap: 8px; }
+  .hero__provas { flex-direction: column; gap: 8px; }
   .item__ico { width: 30px; height: 30px; }
   .item__meta { display: none; }
   .paleta__corpo { min-height: 196px; }
@@ -246,10 +271,13 @@ kbd {
 .cab { max-width: 760px; margin-bottom: clamp(44px, 6vw, 72px); }
 .cab--centro { margin-left: auto; margin-right: auto; text-align: center; }
 .cab--centro .cab__sub { margin-left: auto; margin-right: auto; }
-.rotulo { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--laranja); }
-.rotulo::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--laranja); box-shadow: 0 0 12px var(--laranja); }
+/* Rótulo da seção: a tecla mostra o atalho de teclado que leva até ela */
+.rotulo { display: inline-flex; align-items: center; gap: 12px; margin-bottom: 22px; font: 500 15px/1 var(--f-texto); color: var(--texto-2); }
+.rotulo kbd { min-width: 30px; height: 30px; font-size: 13px; color: var(--laranja); background: linear-gradient(165deg, #22344F, var(--tinta-3)); border-color: var(--linha-2); border-bottom: 3px solid var(--sombra); }
+.rotulo__tag { font: 500 12.5px/1 var(--f-mono); color: var(--nevoa); padding: 6px 9px; border: 1px solid var(--linha-2); border-radius: 7px; }
 .rotulo--escuro { color: var(--texto-escuro); }
-.rotulo--escuro::before { box-shadow: none; }
+.rotulo--escuro kbd { color: var(--tinta); background: #fff; border-color: var(--areia-linha); border-bottom-color: #C9C2B4; }
+@media (hover: none) { .rotulo kbd { display: none; } }
 .cab__sub { margin-top: 22px; max-width: 580px; font-size: 18px; color: var(--texto-2); }
 
 /* ---------- Bento ---------- */
@@ -425,9 +453,23 @@ kbd {
 .projeto h2 { font-size: clamp(32px, 3.8vw, 50px); text-wrap: pretty; }
 .ficha { margin: 36px 0 0; }
 .ficha > div { display: grid; grid-template-columns: 96px 1fr; gap: 16px; padding: 18px 0; border-top: 1px solid var(--linha); }
-.ficha dt { font-size: 12px; color: var(--laranja); text-transform: uppercase; letter-spacing: .08em; padding-top: 4px; }
+.ficha dt { font-size: 13px; color: var(--laranja); padding-top: 3px; }
 .ficha dd { margin: 0; color: var(--texto-2); font-size: 16px; }
-.projeto__tela { margin: 0; position: relative; perspective: 1600px; }
+.projeto__link {
+  margin-top: 28px; display: inline-grid; grid-template-columns: auto 22px; grid-template-rows: auto auto; column-gap: 18px; row-gap: 4px; align-items: center;
+  padding: 16px 20px; border-radius: 16px; text-decoration: none; background: var(--tinta-2); border: 1px solid var(--linha-2); transition: border-color .2s, background .2s;
+}
+.projeto__link span:first-child { font-weight: 600; color: var(--texto); }
+.projeto__link .mono { grid-row: 2; font-size: 12.5px; color: var(--nevoa); }
+.projeto__link svg { grid-row: 1 / 3; grid-column: 2; width: 22px; height: 22px; color: var(--laranja); transition: translate .2s; }
+.projeto__link:hover { border-color: var(--laranja); background: var(--tinta-3); }
+.projeto__link:hover svg { translate: 3px -3px; }
+.projeto__tela { margin: 0 0 40px; position: relative; perspective: 1600px; }
+.projeto__cel {
+  position: absolute; right: -14px; bottom: -40px; width: 24%; padding: 7px; border-radius: 26px; background: #05080E;
+  border: 1.5px solid #2A3A52; box-shadow: 0 30px 70px rgba(0, 0, 0, .6);
+}
+.projeto__cel img { width: 100%; height: auto; border-radius: 19px; }
 .projeto__tela::before { content: ""; position: absolute; inset: 10% 5% -4% 10%; background: radial-gradient(closest-side, rgba(255, 106, 43, .35), transparent); filter: blur(40px); z-index: -1; }
 .janela {
   border-radius: 16px; overflow: hidden; overflow: clip; background: var(--tinta); border: 1px solid var(--linha-2);
@@ -882,12 +924,34 @@ input[type="range"]:focus-visible { outline: 2px solid var(--laranja); outline-o
 .previa__linha--depois { background: rgba(255, 106, 43, .12); color: var(--texto); }
 .previa__linha--depois span { color: var(--laranja); }
 
-/* ---------- Faixa que responde à rolagem ---------- */
-.faixa-vel { overflow: hidden; overflow: clip; padding: clamp(36px, 6vw, 72px) 0; border-top: 1px solid var(--linha); }
-.faixa-vel__trilho { display: flex; align-items: center; gap: clamp(20px, 3vw, 40px); width: max-content; will-change: transform; }
-.faixa-vel span { font: 700 clamp(48px, 9vw, 132px)/1 var(--f-display); letter-spacing: -0.05em; white-space: nowrap; color: transparent; -webkit-text-stroke: 1.5px rgba(138, 151, 171, .55); }
-.faixa-vel span.cheio { color: var(--texto); -webkit-text-stroke: 0; }
-.faixa-vel b { font: 400 clamp(36px, 6vw, 90px)/1 var(--f-mono); color: var(--laranja); }
+/* ---------- Trilho lateral (telas largas) ----------
+   O caminho pontilhado acompanha a leitura; cada parada é a tecla de atalho da seção. */
+.trilho { display: none; }
+@media (min-width: 1380px) and (hover: hover) {
+  .trilho {
+    display: block; position: fixed; z-index: 55; left: max(22px, env(safe-area-inset-left, 0px)); top: 50%; translate: -12px -50%;
+    opacity: 0; visibility: hidden; transition: opacity .35s, translate .35s, visibility .35s;
+  }
+  .trilho.on { opacity: 1; visibility: visible; translate: 0 -50%; }
+  .trilho ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 26px; position: relative; }
+  .trilho__linha { position: absolute; left: 13px; top: 14px; bottom: 14px; width: 2px;
+    background-image: radial-gradient(circle, rgba(138, 151, 171, .6) 1px, transparent 1.4px); background-size: 2px 8px; }
+  .trilho__linha i { position: absolute; inset: 0; background: var(--laranja); border-radius: 2px; transform-origin: top; scale: 1 0; box-shadow: 0 0 10px rgba(255, 106, 43, .6); }
+  .trilho__k { position: relative; display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--texto-2); }
+  .trilho__k kbd { width: 28px; height: 28px; font-size: 12px; background: var(--fundo); color: var(--nevoa); transition: background .2s, color .2s, border-color .2s, scale .2s; }
+  .trilho__k span {
+    font-size: 13.5px; font-weight: 500; white-space: nowrap; padding: 5px 10px; border-radius: 8px;
+    background: rgba(10, 18, 32, .92); border: 1px solid var(--linha-2);
+    opacity: 0; translate: -6px 0; transition: opacity .2s, translate .2s; pointer-events: none;
+  }
+  .trilho__k:hover span, .trilho__k:focus-visible span { opacity: 1; translate: 0 0; }
+  .trilho__k.passou kbd { color: var(--laranja); border-color: rgba(255, 106, 43, .45); }
+  .trilho__k.ativa kbd { background: var(--laranja); color: var(--tinta); border-color: var(--laranja-2); scale: 1.12; }
+  .trilho__k:hover kbd { color: var(--texto); border-color: var(--nevoa); }
+  .trilho__k.ativa:hover kbd { color: var(--tinta); }
+  /* no trilho, a barra fina do topo seria repetida */
+  .progresso { display: none; }
+}
 
 /* ---------- Dúvidas: espaço para a animação ---------- */
 details p { overflow: hidden; }

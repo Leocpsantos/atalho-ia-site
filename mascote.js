@@ -428,7 +428,7 @@
       await andarAte(MARGEM);
       acenar();
       apresentar();
-    }, calmo ? 600 : 2600);
+    }, calmo ? 600 : 5200); // (v3) espera a cena do topo terminar antes de entrar
   }
 
   // usado pelos atalhos de teclado e pelo easter egg (interacoes.js)

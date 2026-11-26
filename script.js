@@ -579,37 +579,7 @@ if (ponteiroFino && !semMovimento && feixe) {
   });
 }
 
-/* ---------- Rótulos "decodificam" ao aparecer ---------- */
-const SIMBOLOS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/<>_*+";
-function embaralhar(el) {
-  const final = el.textContent;
-  let quadro = 0;
-  const total = 16;
-  const passo = () => {
-    quadro++;
-    const revelados = Math.floor((quadro / total) * final.length);
-    el.textContent = final.split("").map((ch, i) => {
-      if (i < revelados || ch === " " || ch === "·") return ch;
-      return SIMBOLOS[Math.floor(Math.random() * SIMBOLOS.length)];
-    }).join("");
-    if (quadro < total) setTimeout(passo, 34);
-    else el.textContent = final;
-  };
-  passo();
-}
-if ("IntersectionObserver" in window && !semMovimento) {
-  const ioRotulo = new IntersectionObserver((itens) => {
-    itens.forEach((it) => {
-      if (!it.isIntersecting) return;
-      ioRotulo.unobserve(it.target);
-      embaralhar(it.target);
-    });
-  }, { threshold: 1 });
-  $$(".rotulo").forEach((r) => {
-    r.setAttribute("aria-label", r.textContent);
-    ioRotulo.observe(r);
-  });
-}
+/* (v3) Os rótulos das seções viraram teclas de atalho; o efeito de "decodificar" saiu. */
 
 /* ---------- Calculadora ---------- */
 (function calculadora() {

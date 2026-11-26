@@ -93,17 +93,17 @@ document.documentElement.classList.add("js");
     <div class="hero__fundo" aria-hidden="true">
       <div class="hero__grade"></div>
       <div class="hero__feixe"></div>
-      <div class="hero__caminho"><i class="rota rota--v"></i><i class="rota rota--h"></i></div>
     </div>
 
     <div class="wrap hero__in">
       <p class="selo"><span class="selo__ponto"></span>Inteligência artificial sob medida para empresas</p>
 
-      <h1 id="hero-titulo" class="hero__titulo">
-        <span class="linha">O caminho mais curto</span>
-        <span class="linha linha--suave">entre o seu problema e a solução.</span>
-      </h1>
+      <h1 id="hero-titulo" class="hero__h1">O caminho mais curto entre o seu problema e a solução.</h1>
 
+      <!-- O logo vira a cena (desenhado por palco.js) -->
+      <div class="palco" id="palco" aria-hidden="true"></div>
+
+      <div class="hero__base">
       <p class="hero__sub">Criamos sistemas, automações, sites e painéis com IA, desenhados para a rotina da sua empresa. Comece dizendo o que toma o seu tempo.</p>
 
       <!-- Paleta de comando: demonstração e contato ao mesmo tempo -->
@@ -127,6 +127,7 @@ document.documentElement.classList.add("js");
         <li>Atendimento online em todo o Brasil</li>
         <li>Você aprova cada etapa</li>
       </ul>
+      </div>
     </div>
   </section>
 
@@ -155,7 +156,7 @@ document.documentElement.classList.add("js");
   <section class="secao" id="demos" aria-labelledby="demos-titulo">
     <div class="wrap">
       <header class="cab">
-        <p class="rotulo mono">Demonstrações</p>
+        <p class="rotulo"><kbd title="Atalho: 1">1</kbd>Demonstrações</p>
         <h2 id="demos-titulo" tabindex="-1">Atalhos que já funcionam hoje.</h2>
         <p class="cab__sub">Exemplos do que dá para construir. Cada solução é ajustada aos dados, às ferramentas e ao jeito de trabalhar de quem vai usar.</p>
       </header>
@@ -230,7 +231,7 @@ document.documentElement.classList.add("js");
   <section class="secao secao--calc" id="calculadora" aria-labelledby="calc-titulo">
     <div class="wrap calc">
       <div class="calc__painel">
-        <p class="rotulo mono">Calculadora</p>
+        <p class="rotulo"><kbd title="Atalho: 2">2</kbd>Calculadora</p>
         <h2 id="calc-titulo" tabindex="-1">Quanto custa o caminho longo?</h2>
         <p class="cab__sub">Escolha uma tarefa repetitiva e ajuste os números. Veja quanto tempo ela ocupa da sua equipe todo mês.</p>
 
@@ -268,7 +269,7 @@ document.documentElement.classList.add("js");
   <section class="secao secao--mapa" id="mapa" aria-labelledby="mapa-titulo">
     <div class="wrap">
       <header class="cab">
-        <p class="rotulo mono">Mapa do atalho</p>
+        <p class="rotulo"><kbd title="Atalho: M">M</kbd>Mapa do atalho</p>
         <h2 id="mapa-titulo" tabindex="-1">Desenhe o caminho da sua tarefa.</h2>
         <p class="cab__sub">Liste os passos que a sua equipe faz hoje. O mapa mostra o caminho longo e onde a IA pode cortar caminho.</p>
       </header>
@@ -301,7 +302,7 @@ document.documentElement.classList.add("js");
   <section class="secao secao--como" id="como" aria-labelledby="como-titulo">
     <div class="wrap">
       <header class="cab cab--centro">
-        <p class="rotulo mono">Como funciona</p>
+        <p class="rotulo"><kbd title="Atalho: 3">3</kbd>Como funciona</p>
         <h2 id="como-titulo" tabindex="-1">Quatro teclas. Um atalho.</h2>
         <p class="cab__sub">Um processo curto e transparente. Antes de começar, você já sabe o que vai receber, quanto custa e quando fica pronto.</p>
       </header>
@@ -334,7 +335,7 @@ document.documentElement.classList.add("js");
   <section class="secao secao--areia" id="setores" aria-labelledby="setores-titulo">
     <div class="wrap">
       <header class="cab">
-        <p class="rotulo rotulo--escuro mono">Setores</p>
+        <p class="rotulo rotulo--escuro"><kbd title="Atalho: 4">4</kbd>Setores</p>
         <h2 id="setores-titulo" tabindex="-1">Cada setor tem o seu atalho.</h2>
       </header>
       <ul class="setores">
@@ -354,36 +355,34 @@ document.documentElement.classList.add("js");
   <section class="secao" id="projeto" aria-labelledby="projeto-titulo">
     <div class="wrap projeto">
       <div class="projeto__txt">
-        <p class="rotulo mono">Projeto entregue · jurídico</p>
-        <h2 id="projeto-titulo" tabindex="-1">Site para um escritório de advocacia.</h2>
+        <p class="rotulo"><kbd title="Atalho: 5">5</kbd>Projeto entregue <span class="rotulo__tag">jurídico</span></p>
+        <h2 id="projeto-titulo" tabindex="-1">Site para a Altrão &amp; Pocibom Advogados.</h2>
         <dl class="ficha">
-          <div><dt class="mono">desafio</dt><dd>Uma presença online profissional, que passasse confiança e facilitasse o primeiro contato.</dd></div>
-          <div><dt class="mono">solução</dt><dd>Página única com áreas de atuação, sócios, perguntas frequentes e contato direto pelo WhatsApp com cada advogado, seguindo as regras de publicidade da OAB.</dd></div>
-          <div><dt class="mono">entrega</dt><dd>Site rápido e responsivo, pronto para receber clientes pelo celular ou pelo computador.</dd></div>
+          <div><dt class="mono">desafio</dt><dd>Reunir num lugar só as áreas de atuação, os sócios e o contato do escritório, com um visual à altura da marca.</dd></div>
+          <div><dt class="mono">solução</dt><dd>Página única com as seis áreas de atuação, os dois sócios, perguntas frequentes e contato direto pelo WhatsApp com cada advogado, dentro das regras de publicidade da OAB.</dd></div>
+          <div><dt class="mono">resultado</dt><dd>No ar com domínio próprio, rápido no celular e no computador.</dd></div>
         </dl>
+        <a class="projeto__link" href="https://altraoepocibomadv.com.br" target="_blank" rel="noopener">
+          <span>Ver o site no ar</span><span class="mono">altraoepocibomadv.com.br</span><svg aria-hidden="true"><use href="#seta"/></svg>
+        </a>
       </div>
       <figure class="projeto__tela">
         <div class="janela">
-          <div class="janela__barra" aria-hidden="true"><i></i><i></i><i></i><span class="mono">site do escritório</span></div>
-          <img src="assets/projeto-advocacia.jpg" alt="Tela inicial do site do escritório de advocacia, com fundo escuro e detalhes dourados" width="1440" height="900" loading="lazy">
+          <div class="janela__barra" aria-hidden="true"><i></i><i></i><i></i><span class="mono">altraoepocibomadv.com.br</span></div>
+          <img src="assets/projeto-advocacia-desktop.jpg" alt="Topo do site da Altrão &amp; Pocibom Advogados no computador: fundo escuro, título “Defesa técnica. Compromisso humano.” e o monograma AP em dourado" width="1440" height="520" loading="lazy">
+        </div>
+        <div class="projeto__cel">
+          <img src="assets/projeto-advocacia-celular.jpg" alt="O mesmo site aberto no celular" width="390" height="590" loading="lazy">
         </div>
       </figure>
     </div>
   </section>
 
-  <!-- ============ FAIXA QUE RESPONDE À ROLAGEM ============ -->
-  <div class="faixa-vel" aria-hidden="true">
-    <div class="faixa-vel__trilho">
-      <span>menos clique</span><b>↗</b><span class="cheio">mais resultado</span><b>↗</b><span>menos planilha</span><b>↗</b><span class="cheio">mais tempo</span><b>↗</b>
-      <span>menos clique</span><b>↗</b><span class="cheio">mais resultado</span><b>↗</b><span>menos planilha</span><b>↗</b><span class="cheio">mais tempo</span><b>↗</b>
-    </div>
-  </div>
-
   <!-- ============ DÚVIDAS ============ -->
   <section class="secao secao--duvidas" id="duvidas" aria-labelledby="duvidas-titulo">
     <div class="wrap duvidas">
       <header class="cab">
-        <p class="rotulo mono">Dúvidas</p>
+        <p class="rotulo"><kbd title="Atalho: 6">6</kbd>Dúvidas</p>
         <h2 id="duvidas-titulo" tabindex="-1">Perguntas frequentes.</h2>
         <p class="cab__sub">Não achou a sua? Escreva no WhatsApp e respondemos.</p>
       </header>
@@ -470,5 +469,7 @@ document.documentElement.classList.add("js");
 <script src="mascote.js"></script>
 <script src="interacoes.js"></script>
 <script src="mapa.js"></script>
+<script src="palco.js"></script>
+<script src="trilho.js"></script>
 </body>
 </html>
