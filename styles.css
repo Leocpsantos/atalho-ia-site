@@ -1028,59 +1028,6 @@ html.com-intro .intro.ja { animation: intro-sai .45s 0s cubic-bezier(.7, 0, .2, 
 @keyframes intro-aperta { 50% { translate: 0 8px; box-shadow: 0 2px 0 var(--sombra), inset 0 1px 0 rgba(255,255,255,.07); } }
 @keyframes intro-pop { from { opacity: 0; scale: .5; } }
 
-/* ---------- Tec na rolagem (v3) ----------
-   Descida: corre, patina, pula. Subida: de-re, escala, arrasta.
-   --inclina vem do mascote.js (sinal conforme a direção). */
-.tec__svg { transform-origin: 50% 92%; transition: rotate .25s ease-out; }
-.tec.rolando .tec__corpo { animation: none; }
-
-/* descida 1: correndo */
-.tec.rol-corre .tec__perna--e { animation: tec-passo .17s ease-in-out infinite alternate; }
-.tec.rol-corre .tec__perna--d { animation: tec-passo .17s ease-in-out infinite alternate-reverse; }
-.tec.rol-corre .tec__braco--e { animation: tec-braco .17s ease-in-out infinite alternate; }
-.tec.rol-corre .tec__braco--d { animation: tec-braco .17s ease-in-out infinite alternate-reverse; }
-.tec.rol-corre .tec__corpo { animation: tec-balanca .17s ease-in-out infinite alternate; }
-
-/* descida 2: de patinete (pernas paradas, rastro de velocidade) */
-.tec.rol-patina .tec__braco { transform: rotate(-70deg); }
-.tec.rol-patina .tec__sombra { transform: scaleX(1.5); transform-origin: center; }
-.tec.rol-patina .tec__boneco::before {
-  content: ""; position: absolute; right: 88%; top: 34%; width: 46px; height: 34px; pointer-events: none;
-  background: repeating-linear-gradient(180deg, rgba(138, 151, 171, .7) 0 3px, transparent 3px 11px);
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000); mask-image: linear-gradient(90deg, transparent, #000);
-  animation: tec-vento .3s linear infinite;
-}
-.tec__boneco { position: relative; }
-@keyframes tec-vento { from { translate: 8px 0; opacity: .4; } to { translate: -10px 0; opacity: 1; } }
-
-/* descida 3: pulando */
-.tec.rol-pula .tec__svg { animation: tec-pulo .38s cubic-bezier(.3, 0, .5, 1) infinite; }
-.tec.rol-pula .tec__perna { transform: rotate(0) scaleY(.75); }
-.tec.rol-pula .tec__braco { transform: rotate(-150deg); }
-@keyframes tec-pulo { 0%, 100% { translate: 0 0; } 50% { translate: 0 -16px; } }
-
-/* subida 1: de ré (moonwalk), olhando para a direita */
-.tec.rol-de-re .tec__perna--e { animation: tec-desliza .3s ease-in-out infinite alternate; }
-.tec.rol-de-re .tec__perna--d { animation: tec-desliza .3s ease-in-out infinite alternate-reverse; }
-.tec.rol-de-re .tec__olhos { transform: translateX(4px) !important; }
-@keyframes tec-desliza { from { transform: translateX(-5px) rotate(-6deg); } to { transform: translateX(5px) rotate(4deg); } }
-
-/* subida 2: escalando (braços para cima, alternando) */
-.tec.rol-escala .tec__braco--e { animation: tec-escala .26s ease-in-out infinite alternate; }
-.tec.rol-escala .tec__braco--d { animation: tec-escala .26s ease-in-out infinite alternate-reverse; }
-.tec.rol-escala .tec__perna--e { animation: tec-passo .26s ease-in-out infinite alternate; }
-.tec.rol-escala .tec__perna--d { animation: tec-passo .26s ease-in-out infinite alternate-reverse; }
-.tec.rol-escala .tec__olhos { transform: translateY(-4px) !important; }
-@keyframes tec-escala { from { transform: rotate(-175deg); } to { transform: rotate(-130deg); } }
-
-/* subida 3: se arrastando, com cara de cansado */
-.tec.rol-arrasta .tec__perna--e { animation: tec-passo .55s ease-in-out infinite alternate; }
-.tec.rol-arrasta .tec__perna--d { animation: tec-passo .55s ease-in-out infinite alternate-reverse; }
-.tec.rol-arrasta .tec__corpo { transform: translateY(4px); }
-.tec.rol-arrasta .tec__braco { transform: rotate(8deg); }
-.tec.rol-arrasta .tec__olho { transform: scaleY(.35); }
-.tec.rol-arrasta .tec__boca { transform: scaleY(-1); transform-origin: center; }
-
 /* freada ao parar */
 .tec.freando .tec__svg { animation: tec-freia .45s ease-out; }
 @keyframes tec-freia { 30% { rotate: -7deg; } 60% { rotate: 3deg; } }
@@ -1119,7 +1066,58 @@ html.com-intro .intro:not(.comeca), html.com-intro .intro:not(.comeca) * { anima
 /* (v3) Animações infinitas param quando a seção sai da tela (script.js põe .fora) */
 .hero.fora .selo__ponto::after, .ferramentas.fora .ferramentas__trilho { animation-play-state: paused; }
 
-/* (v3) Durante a rolagem as partes do Tec param e só o desenho inteiro balança: vai para o compositor */
-.tec.rolando .tec__perna, .tec.rolando .tec__braco, .tec.rolando .tec__corpo, .tec.rolando .tec__sombra, .tec.rolando .tec__boneco::before { animation: none !important; }
-.tec.rolando .tec__svg { animation: tec-corrida .28s ease-in-out infinite alternate; }
-@keyframes tec-corrida { from { translate: 0 0; } to { translate: 0 -5px; } }
+/* (fica no fim para valer sobre .no-ar) */
+/* ---------- Tec viajando pela página (v4) ----------
+   Na rolagem ele não corre mais pela tela: usa os elementos como degraus.
+   Voos: foguete, gancho, paraquedas e rapel (classes voo-* vêm do mascote.js). */
+.tec__svg { transform-origin: 50% 92%; transition: rotate .25s ease-out; }
+.tec__boneco { position: relative; transform-origin: 50% 70%; }
+.tec__boneco > .tec__svg { position: relative; }
+
+/* olhando para onde a página vai */
+.tec.olha-baixo .tec__olhos { transform: translateY(5px) !important; }
+.tec.olha-cima .tec__olhos { transform: translateY(-5px) !important; }
+
+/* foguetinho nas costas: dois tubos atrás do corpo, com chama */
+.tec__mochila { position: absolute; left: -12px; top: 4px; width: 96px; height: 96px; display: none; pointer-events: none; }
+.tec__mochila svg { width: 100%; height: 100%; overflow: visible; }
+.tec__chama { transform-origin: 50% 0; transform-box: fill-box; animation: tec-chama .08s linear infinite alternate; }
+.tec__chama--miolo { animation-duration: .06s; }
+@keyframes tec-chama { from { transform: scale(.8, .7); } to { transform: scale(1.1, 1.15); } }
+.tec.voo-foguete .tec__mochila { display: block; animation: tec-liga .2s ease-out; }
+@keyframes tec-liga { from { opacity: 0; translate: 0 6px; } }
+.tec.voo-foguete .tec__braco--e { transform: rotate(20deg); }
+.tec.voo-foguete .tec__braco--d { transform: rotate(-20deg); }
+.tec.voo-foguete .tec__perna { transform: rotate(0) scaleY(.9); }
+.tec.voo-foguete .tec__olhos { transform: translateY(-5px) !important; }
+.tec.voo-foguete .tec__olho { transform: scaleY(.6); }
+.tec-fumaca {
+  position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%;
+  background: var(--nevoa); pointer-events: none; z-index: 54; animation: tec-fumaca .75s ease-out forwards;
+}
+@keyframes tec-fumaca { from { opacity: .5; scale: .4; } to { opacity: 0; scale: 2.3; translate: 0 26px; } }
+
+/* paraquedas: abre logo depois do pulinho */
+.tec__paraquedas { position: absolute; left: -24px; top: -84px; width: 120px; height: 96px; display: none; pointer-events: none; transform-origin: 50% 100%; }
+.tec__paraquedas svg { width: 100%; height: 100%; overflow: visible; }
+.tec.voo-paraquedas .tec__paraquedas { display: block; animation: tec-abre .4s .2s cubic-bezier(.2, .9, .3, 1.3) backwards; }
+@keyframes tec-abre { from { opacity: 0; scale: .15 .3; } }
+.tec.voo-paraquedas .tec__braco { transform: rotate(-160deg); }
+
+/* corda: no gancho é a seta laranja (o atalho puxa o Tec); no rapel é o caminho pontilhado */
+.tec__corda { position: absolute; left: 36px; top: 0; width: 0; height: 3px; margin-top: -1.5px; display: none; pointer-events: none; transform-origin: 0 50%; border-radius: 2px; }
+.tec.voo-gancho .tec__corda { display: block; background: var(--laranja); }
+.tec.voo-gancho .tec__corda::after {
+  content: ""; position: absolute; right: 1px; top: 50%; width: 11px; height: 11px; margin-top: -5.5px;
+  border-top: 3px solid var(--laranja); border-right: 3px solid var(--laranja); rotate: 45deg;
+}
+.tec.voo-rapel .tec__corda { display: block; height: 2px; background: repeating-linear-gradient(90deg, var(--nevoa) 0 3px, transparent 3px 8px); }
+.tec.voo-gancho .tec__braco, .tec.voo-rapel .tec__braco { transform: rotate(-170deg); }
+.tec.voo-gancho .tec__olhos { transform: translateY(-5px) !important; }
+
+/* pernas balançando no gancho e no paraquedas; empurrando a parede no rapel */
+.tec.voo-gancho .tec__perna--e, .tec.voo-paraquedas .tec__perna--e { animation: tec-balanca-perna .45s ease-in-out infinite alternate; }
+.tec.voo-gancho .tec__perna--d, .tec.voo-paraquedas .tec__perna--d { animation: tec-balanca-perna .45s ease-in-out infinite alternate-reverse; }
+.tec.voo-rapel .tec__perna--e { animation: tec-passo .25s ease-in-out infinite alternate; }
+.tec.voo-rapel .tec__perna--d { animation: tec-passo .25s ease-in-out infinite alternate-reverse; }
+
