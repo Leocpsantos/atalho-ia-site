@@ -133,7 +133,7 @@
   function acenar() {
     if (calmo) return;
     raiz.classList.remove("acenando");
-    void raiz.offsetWidth;
+    void raiz.offsetWidth; // reinicia a animação
     raiz.classList.add("acenando");
     setTimeout(() => raiz.classList.remove("acenando"), 1300);
   }
@@ -426,8 +426,10 @@
     aplicarX(x);
     raiz.classList.add("pronto");
     const entrar = () => setTimeout(async () => {
-      if (!chat.hidden || emTour) return;
+      // se a pessoa já começou a rolar, o Tec já entrou correndo: sem convite
+      if (!chat.hidden || emTour || window.tecRolou) return;
       await andarAte(MARGEM);
+      if (window.tecRolou) return;
       acenar();
       apresentar();
     }, calmo ? 600 : 4400); // (v3) espera a cena do topo terminar antes de entrar
@@ -437,8 +439,8 @@
   }
 
   /* ---------- Tec na rolagem (v3) ----------
-     Rolar para baixo leva o Tec para a direita; para cima, de volta à esquerda.
-     Cada rolada sorteia um jeito diferente (sem repetir o anterior) e, de vez
+     Rolar para baixo faz o Tec correr para a direita; para cima, para a esquerda.
+     Ele atravessa a tela inteira: sai por um lado e entra pelo outro. Cada rolada sorteia um jeito diferente (sem repetir o anterior) e, de vez
      em quando, ele solta um comentário. A voz continua de empresa: sem "eu". */
   const MODOS = { 1: ["corre", "patina", "pula"], [-1]: ["de-re", "escala", "arrasta"] };
   const FALAS = {
@@ -495,10 +497,13 @@
     let falouNoTopo = true;
     let falouNoFim = false;
     let quadroRol = 0;
-    const ocupado = () => emTour || !chat.hidden || (!balao.hidden && acoes.children.length > 0) || x < 0 || !raiz.classList.contains("pronto");
+    let voltas = 0;
+    // o Tec atravessa a tela: cada pixel rolado vira um pedaço de corrida
+    const RITMO = fino ? 0.55 : 0.45;
 
     function podeFalar(intervalo) { return Date.now() - ultimaFala > intervalo; }
     function comentar(texto) { ultimaFala = Date.now(); falarRapido(texto); }
+    function limiteDireito() { return window.innerWidth - largura() - MARGEM; }
 
     function trocarModo(dir) {
       const opcoes = MODOS[dir].filter((m) => m !== ultimoModo[dir]);
@@ -513,15 +518,22 @@
       raiz.style.setProperty("--inclina", (modo === "de-re" ? 7 : dir * (modo === "patina" ? 12 : modo === "arrasta" ? 4 : 8)) + "deg");
     }
 
-    function parar() {
+    async function parar() {
       raiz.classList.remove("rolando", "rol-" + modo, "para-esquerda");
+      const modoQueParou = modo;
       modo = "";
       direcao = 0;
       raiz.classList.add("freando");
       setTimeout(() => raiz.classList.remove("freando"), 500);
+      // se parou fora da tela ou em cima do botão do WhatsApp, volta para um lugar visível
+      const dentro = Math.max(MARGEM, Math.min(limiteDireito() - 80, x));
+      if (Math.abs(dentro - x) > 2) await andarAte(dentro);
+      if (emTour || !chat.hidden) return;
       const max = document.documentElement.scrollHeight - window.innerHeight;
-      if (window.scrollY >= max - 4 && !falouNoFim && podeFalar(4000)) { falouNoFim = true; comentar(proxima("fim", FALAS.fim)); }
-      else if (window.scrollY < 40 && !falouNoTopo && podeFalar(4000)) { falouNoTopo = true; comentar(proxima("topo", FALAS.topo)); }
+      if (window.scrollY >= max - 4 && !falouNoFim && podeFalar(3000)) { falouNoFim = true; feliz(); comentar(proxima("fim", FALAS.fim)); }
+      else if (window.scrollY < 40 && !falouNoTopo && podeFalar(3000)) { falouNoTopo = true; acenar(); comentar(proxima("topo", FALAS.topo)); }
+      else if (modoQueParou === "arrasta" || modoQueParou === "corre") { if (Math.random() < 0.5) piscar(); }
+      else if (Math.random() < 0.35) acenar();
     }
 
     function aoRolar() {
@@ -529,7 +541,11 @@
       const y = window.scrollY;
       const dy = y - ultimaY;
       ultimaY = y;
-      if (ocupado() || Math.abs(dy) < 2) return;
+      if (emTour || !chat.hidden || Math.abs(dy) < 1) return;
+      // rolar a página responde o convite do tour com um "agora não"
+      if (!balao.hidden && acoes.children.length > 0) { calar(); guardar("tec-visto", "1"); }
+      window.tecRolou = true;
+
       if (y > 200) falouNoTopo = false;
       const max = document.documentElement.scrollHeight - window.innerHeight;
       if (y < max - 200) falouNoFim = false;
@@ -538,28 +554,39 @@
       if (dir !== direcao) {
         direcao = dir;
         trocarModo(dir);
-        // comenta de vez em quando, sem encher
-        if (podeFalar(9000) && Math.random() < 0.5) {
+        if (podeFalar(7000) && Math.random() < 0.6) {
           let texto;
-          if (Math.random() < 0.45) texto = FALAS.modo[modo];
+          if (Math.random() < 0.4) texto = FALAS.modo[modo];
           else if (dir > 0) texto = Math.abs(dy) > 90 ? proxima("rapida", FALAS.rapida) : proxima("descida", FALAS.descida);
           else texto = fino && Math.random() < 0.3 ? FALAS.teclado[0] : proxima("subida", FALAS.subida);
           comentar(texto);
         }
-      } else if (dir > 0 && Math.abs(dy) > 140 && podeFalar(9000)) {
+      } else if (dir > 0 && Math.abs(dy) > 160 && podeFalar(7000)) {
         comentar(proxima("rapida", FALAS.rapida));
       }
 
-      // posição acompanha o quanto da página já foi lido (deixa espaço para o botão do WhatsApp)
-      const p = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
-      const limite = window.innerWidth - largura() - 96;
-      x = MARGEM + p * Math.max(0, limite - MARGEM);
-      raiz.style.setProperty("--dur", ".35s");
+      // corre na direção da rolagem; ao sair por um lado, entra pelo outro
+      const passo = Math.max(-70, Math.min(70, dy * RITMO));
+      let novoX = x + passo;
+      const w = largura();
+      if (novoX > window.innerWidth + 8) {
+        novoX = -w - 8; voltas++;
+        raiz.style.setProperty("--dur", "0s"); aplicarX(novoX); x = novoX;
+        if (voltas % 3 === 0 && podeFalar(5000)) comentar("Mais uma volta na tela. Isso conta como exercício?");
+        return;
+      }
+      if (novoX < -w - 8) {
+        novoX = window.innerWidth + 8; voltas++;
+        raiz.style.setProperty("--dur", "0s"); aplicarX(novoX); x = novoX;
+        return;
+      }
+      x = novoX;
+      raiz.style.setProperty("--dur", ".14s");
       aplicarX(x);
       if (!balao.hidden) encaixarBalao();
 
       clearTimeout(fimRolagem);
-      fimRolagem = setTimeout(parar, 240);
+      fimRolagem = setTimeout(parar, 260);
     }
     window.addEventListener("scroll", () => { if (!quadroRol) quadroRol = requestAnimationFrame(aoRolar); }, { passive: true });
   }

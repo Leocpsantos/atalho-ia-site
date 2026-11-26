@@ -986,7 +986,7 @@ html.com-intro .intro {
   display: flex; position: fixed; inset: 0; z-index: 300; align-items: center; justify-content: center;
   background: radial-gradient(ellipse 50% 40% at 50% 50%, rgba(27, 43, 68, .7), transparent 70%), var(--fundo);
   clip-path: polygon(-110% 0, 100% 0, 100% 210%);
-  animation: intro-sai .75s 2.15s cubic-bezier(.7, 0, .2, 1) forwards;
+  animation: intro-sai .75s 1.75s cubic-bezier(.7, 0, .2, 1) forwards;
 }
 html.com-intro .intro.ja { animation: intro-sai .45s 0s cubic-bezier(.7, 0, .2, 1) forwards; }
 @keyframes intro-sai { to { clip-path: polygon(100% 0, 100% 0, 100% 0); visibility: hidden; } }
@@ -994,18 +994,18 @@ html.com-intro .intro.ja { animation: intro-sai .45s 0s cubic-bezier(.7, 0, .2, 
 .intro__tecla {
   width: 132px; height: 132px; border-radius: 32px; display: grid; place-items: center;
   background: linear-gradient(165deg, #22344F, var(--tinta-3)); box-shadow: 0 10px 0 var(--sombra), inset 0 1px 0 rgba(255,255,255,.07);
-  animation: intro-chega .4s ease-out both, intro-aperta .24s .5s ease-in-out;
+  animation: intro-chega .3s ease-out both, intro-aperta .22s .25s ease-in-out;
 }
 .intro__tecla svg { width: 92px; height: 92px; overflow: visible; }
-.intro__revela { fill: none; stroke: #fff; stroke-width: 20; stroke-dasharray: 1 1; animation: p-desenha .45s .72s ease-in-out both; }
+.intro__revela { fill: none; stroke: #fff; stroke-width: 20; stroke-dasharray: 1 1; animation: p-desenha .4s .42s ease-in-out both; }
 .intro__longo { fill: none; stroke: var(--nevoa); stroke-width: 5; stroke-dasharray: 2 9; stroke-linecap: round; }
-.intro__seta { fill: none; stroke: var(--laranja); stroke-width: 12; stroke-linecap: round; stroke-dasharray: 1 1; animation: p-desenha .26s 1.18s cubic-bezier(.7, 0, .25, 1) both; }
-.intro__ponta { fill: none; stroke: var(--laranja); stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; animation: p-surge .18s 1.4s ease-out both; }
-.intro__inicio { fill: var(--laranja); animation: p-surge .2s .7s ease-out both; }
+.intro__seta { fill: none; stroke: var(--laranja); stroke-width: 12; stroke-linecap: round; stroke-dasharray: 1 1; animation: p-desenha .24s .82s cubic-bezier(.7, 0, .25, 1) both; }
+.intro__ponta { fill: none; stroke: var(--laranja); stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; animation: p-surge .16s 1.02s ease-out both; }
+.intro__inicio { fill: var(--laranja); animation: p-surge .2s .4s ease-out both; }
 .intro__marca { display: flex; align-items: center; font: 700 clamp(48px, 9vw, 72px)/1 var(--f-display); letter-spacing: -0.06em; color: var(--texto); }
-.intro__marca span { animation: p-surge .12s calc(1.05s + var(--i) * .06s) both; }
-.intro__marca b { margin-left: 8px; font-size: .36em; letter-spacing: 0; padding: .22em .3em; border-radius: .3em; background: var(--laranja); color: var(--tinta); animation: intro-pop .3s 1.5s cubic-bezier(.3, 1.6, .5, 1) both; }
-.intro__frase { font: 500 15px/1 var(--f-mono); color: var(--nevoa); animation: p-surge .4s 1.65s ease-out both; }
+.intro__marca span { animation: p-surge .12s calc(.75s + var(--i) * .05s) both; }
+.intro__marca b { margin-left: 8px; font-size: .36em; letter-spacing: 0; padding: .22em .3em; border-radius: .3em; background: var(--laranja); color: var(--tinta); animation: intro-pop .3s 1.1s cubic-bezier(.3, 1.6, .5, 1) both; }
+.intro__frase { font: 500 15px/1 var(--f-mono); color: var(--nevoa); animation: p-surge .4s 1.2s ease-out both; }
 .intro__pular {
   position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); bottom: max(20px, env(safe-area-inset-bottom, 0px));
   display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; cursor: pointer;
@@ -1074,3 +1074,7 @@ html.com-intro .intro.ja { animation: intro-sai .45s 0s cubic-bezier(.7, 0, .2, 
 /* freada ao parar */
 .tec.freando .tec__svg { animation: tec-freia .45s ease-out; }
 @keyframes tec-freia { 30% { rotate: -7deg; } 60% { rotate: 3deg; } }
+
+/* Abertura: espera a tela estar pronta (intro.js põe .comeca), senão
+   a pessoa perderia o começo enquanto as fontes carregam */
+html.com-intro .intro:not(.comeca), html.com-intro .intro:not(.comeca) * { animation-play-state: paused !important; }

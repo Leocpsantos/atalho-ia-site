@@ -16,7 +16,7 @@
 
   try { sessionStorage.setItem("intro-vista", "1"); } catch (e) {}
 
-  const pular = () => { if (!intro.classList.contains("ja")) intro.classList.add("ja"); };
+  const pular = () => { intro.classList.add("comeca", "ja"); };
   intro.addEventListener("animationstart", (e) => { if (e.target === intro && e.animationName === "intro-sai") avisar(); });
   intro.addEventListener("animationend", (e) => {
     if (e.target !== intro || e.animationName !== "intro-sai") return;
@@ -31,6 +31,18 @@
   }
   document.addEventListener("keydown", tecla, true);
   intro.querySelector(".intro__pular").focus({ preventScroll: true });
-  // garantia, caso algum evento de animação não dispare
-  setTimeout(() => { avisar(); if (intro.isConnected) { intro.remove(); raiz.classList.remove("com-intro"); } }, 4500);
+
+  // começa só quando a tela já pode ser desenhada (fontes prontas, no máximo 1,5 s)
+  let comecou = false;
+  function comecar() {
+    if (comecou) return;
+    comecou = true;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      intro.classList.add("comeca");
+      // garantia, caso algum evento de animação não dispare
+      setTimeout(() => { avisar(); if (intro.isConnected) { intro.remove(); raiz.classList.remove("com-intro"); } }, 4200);
+    }));
+  }
+  const fontes = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+  Promise.race([fontes, new Promise((r) => setTimeout(r, 1500))]).then(comecar);
 })();

@@ -49,6 +49,8 @@ document.documentElement.classList.add("js");
 /* Abertura: uma vez por sessão, só na página inicial sem âncora e sem "reduzir movimento" */
 try {
   if (!sessionStorage.getItem("intro-vista") && !location.hash && !matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("com-intro");
+  // garantia: se o intro.js não carregar, a abertura some sozinha
+  setTimeout(function () { document.documentElement.classList.remove("com-intro"); }, 7000);
 } catch (e) {}
 </script>
 </head>
