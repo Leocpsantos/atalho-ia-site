@@ -384,6 +384,8 @@
   function abrirChat() {
     if (emTour) encerrar();
     calar();
+    // o chat abre a partir do canto esquerdo; se o Tec correu para longe, ele volta
+    if (x > MARGEM + 4) andarAte(MARGEM);
     chat.hidden = false;
     boneco.setAttribute("aria-expanded", "true");
     raiz.classList.add("chat-aberto");
@@ -423,12 +425,143 @@
     raiz.style.setProperty("--dur", "0s");
     aplicarX(x);
     raiz.classList.add("pronto");
-    setTimeout(async () => {
+    const entrar = () => setTimeout(async () => {
       if (!chat.hidden || emTour) return;
       await andarAte(MARGEM);
       acenar();
       apresentar();
-    }, calmo ? 600 : 5200); // (v3) espera a cena do topo terminar antes de entrar
+    }, calmo ? 600 : 4400); // (v3) espera a cena do topo terminar antes de entrar
+    // com a abertura, conta o tempo a partir de quando ela sai
+    if (document.documentElement.classList.contains("com-intro") && !window.atalhoIntroFim) document.addEventListener("atalho:intro-fim", entrar, { once: true });
+    else entrar();
+  }
+
+  /* ---------- Tec na rolagem (v3) ----------
+     Rolar para baixo leva o Tec para a direita; para cima, de volta à esquerda.
+     Cada rolada sorteia um jeito diferente (sem repetir o anterior) e, de vez
+     em quando, ele solta um comentário. A voz continua de empresa: sem "eu". */
+  const MODOS = { 1: ["corre", "patina", "pula"], [-1]: ["de-re", "escala", "arrasta"] };
+  const FALAS = {
+    descida: [
+      "Descendo no braço? Tem gente que automatiza até isso.",
+      "Você rola, o Tec corre. Divisão de tarefas bem justa.",
+      "Calma, as coisas boas não vão fugir.",
+      "Rolar a página: o caminho longo em sua forma mais pura.",
+      "Isso, desce. Lá embaixo tem uma tecla Enter esperando por você.",
+      "Corrida patrocinada pelo seu dedo. Obrigado, viu?",
+    ],
+    rapida: [
+      "Opa, leu tudo isso em dois segundos? Impressionante.",
+      "Devagar! O Tec ainda não tem turbo.",
+      "Rolou tão rápido que até a IA ficou com inveja.",
+    ],
+    subida: [
+      "Esqueceu alguma coisa lá em cima?",
+      "Voltando? Alguma coisa chamou a atenção, né?",
+      "Ida e volta, ida e volta… isso tem cara de tarefa repetitiva.",
+      "Subir é sempre mais puxado. Pra você não, só mexe o dedo.",
+    ],
+    teclado: ["Dica de quem sobe muito: a tecla 0 leva direto ao topo."],
+    modo: {
+      patina: "Ladeira abaixo de patinete. Sem freio, mas com estilo.",
+      pula: "Pulando as partes chatas? Aqui não tem nenhuma, mas tudo bem.",
+      "de-re": "Subindo de ré, que é pra não perder a pose.",
+      escala: "Escalando a página. Lá de cima a vista é melhor.",
+      arrasta: "Subindo… devagar… sem pressa nenhuma…",
+    },
+    fim: [
+      "Fim da página. A tecla Enter está bem aí, olhando pra você.",
+      "Chegou ao fim. O próximo passo é sem enrolação: Enter.",
+    ],
+    topo: [
+      "De volta ao começo. O caminho mais curto continua aqui.",
+      "Topo de novo. Se quiser um tour guiado, é só clicar no Tec.",
+    ],
+  };
+  // cada lista é embaralhada e usada até o fim antes de repetir
+  const filas = {};
+  function proxima(chave, lista) {
+    if (!filas[chave] || !filas[chave].length) filas[chave] = lista.slice().sort(() => Math.random() - 0.5);
+    return filas[chave].pop();
+  }
+
+  if (!calmo) {
+    let ultimaY = window.scrollY;
+    let direcao = 0;
+    let modo = "";
+    const ultimoModo = { 1: "", [-1]: "" };
+    let fimRolagem = 0;
+    let ultimaFala = 0;
+    let falouNoTopo = true;
+    let falouNoFim = false;
+    let quadroRol = 0;
+    const ocupado = () => emTour || !chat.hidden || (!balao.hidden && acoes.children.length > 0) || x < 0 || !raiz.classList.contains("pronto");
+
+    function podeFalar(intervalo) { return Date.now() - ultimaFala > intervalo; }
+    function comentar(texto) { ultimaFala = Date.now(); falarRapido(texto); }
+
+    function trocarModo(dir) {
+      const opcoes = MODOS[dir].filter((m) => m !== ultimoModo[dir]);
+      const novo = opcoes[Math.floor(Math.random() * opcoes.length)];
+      ultimoModo[dir] = novo;
+      raiz.classList.remove("rol-" + modo);
+      modo = novo;
+      raiz.classList.add("rolando", "rol-" + modo);
+      raiz.classList.remove("freando");
+      // no "de ré" ele olha para a direita enquanto vai para a esquerda
+      raiz.classList.toggle("para-esquerda", dir < 0 && modo !== "de-re");
+      raiz.style.setProperty("--inclina", (modo === "de-re" ? 7 : dir * (modo === "patina" ? 12 : modo === "arrasta" ? 4 : 8)) + "deg");
+    }
+
+    function parar() {
+      raiz.classList.remove("rolando", "rol-" + modo, "para-esquerda");
+      modo = "";
+      direcao = 0;
+      raiz.classList.add("freando");
+      setTimeout(() => raiz.classList.remove("freando"), 500);
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      if (window.scrollY >= max - 4 && !falouNoFim && podeFalar(4000)) { falouNoFim = true; comentar(proxima("fim", FALAS.fim)); }
+      else if (window.scrollY < 40 && !falouNoTopo && podeFalar(4000)) { falouNoTopo = true; comentar(proxima("topo", FALAS.topo)); }
+    }
+
+    function aoRolar() {
+      quadroRol = 0;
+      const y = window.scrollY;
+      const dy = y - ultimaY;
+      ultimaY = y;
+      if (ocupado() || Math.abs(dy) < 2) return;
+      if (y > 200) falouNoTopo = false;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      if (y < max - 200) falouNoFim = false;
+
+      const dir = dy > 0 ? 1 : -1;
+      if (dir !== direcao) {
+        direcao = dir;
+        trocarModo(dir);
+        // comenta de vez em quando, sem encher
+        if (podeFalar(9000) && Math.random() < 0.5) {
+          let texto;
+          if (Math.random() < 0.45) texto = FALAS.modo[modo];
+          else if (dir > 0) texto = Math.abs(dy) > 90 ? proxima("rapida", FALAS.rapida) : proxima("descida", FALAS.descida);
+          else texto = fino && Math.random() < 0.3 ? FALAS.teclado[0] : proxima("subida", FALAS.subida);
+          comentar(texto);
+        }
+      } else if (dir > 0 && Math.abs(dy) > 140 && podeFalar(9000)) {
+        comentar(proxima("rapida", FALAS.rapida));
+      }
+
+      // posição acompanha o quanto da página já foi lido (deixa espaço para o botão do WhatsApp)
+      const p = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+      const limite = window.innerWidth - largura() - 96;
+      x = MARGEM + p * Math.max(0, limite - MARGEM);
+      raiz.style.setProperty("--dur", ".35s");
+      aplicarX(x);
+      if (!balao.hidden) encaixarBalao();
+
+      clearTimeout(fimRolagem);
+      fimRolagem = setTimeout(parar, 240);
+    }
+    window.addEventListener("scroll", () => { if (!quadroRol) quadroRol = requestAnimationFrame(aoRolar); }, { passive: true });
   }
 
   // usado pelos atalhos de teclado e pelo easter egg (interacoes.js)

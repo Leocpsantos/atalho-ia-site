@@ -126,9 +126,18 @@
   if (estreitoMq.addEventListener) estreitoMq.addEventListener("change", desenhar);
   else estreitoMq.addListener(desenhar);
 
-  if (document.fonts && document.fonts.ready) {
-    // espera as fontes para a animação não começar com a fonte reserva
-    const limite = new Promise((r) => setTimeout(r, 900));
-    Promise.race([document.fonts.ready, limite]).then(desenhar);
-  } else desenhar();
+  function iniciar() {
+    if (document.fonts && document.fonts.ready) {
+      // espera as fontes para a animação não começar com a fonte reserva
+      const limite = new Promise((r) => setTimeout(r, 900));
+      Promise.race([document.fonts.ready, limite]).then(desenhar);
+    } else desenhar();
+  }
+  // com a abertura (intro.js), a cena começa quando a abertura sai
+  if (document.documentElement.classList.contains("com-intro") && !window.atalhoIntroFim) {
+    let foi = false;
+    const vai = () => { if (!foi) { foi = true; iniciar(); } };
+    document.addEventListener("atalho:intro-fim", vai, { once: true });
+    setTimeout(vai, 5000);
+  } else iniciar();
 })();

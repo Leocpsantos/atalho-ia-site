@@ -977,3 +977,100 @@ details p { overflow: hidden; }
   .ferramentas__lista[aria-hidden] { display: none; }
   .ferramentas__lista { flex-wrap: wrap; justify-content: center; padding: 0 20px; }
 }
+
+/* ---------- Abertura (v3) ----------
+   Só aparece com html.com-intro (posto no <head>, uma vez por sessão).
+   O tempo todo é CSS: se o intro.js falhar, a tela sai sozinha. */
+.intro { display: none; }
+html.com-intro .intro {
+  display: flex; position: fixed; inset: 0; z-index: 300; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse 50% 40% at 50% 50%, rgba(27, 43, 68, .7), transparent 70%), var(--fundo);
+  clip-path: polygon(-110% 0, 100% 0, 100% 210%);
+  animation: intro-sai .75s 2.15s cubic-bezier(.7, 0, .2, 1) forwards;
+}
+html.com-intro .intro.ja { animation: intro-sai .45s 0s cubic-bezier(.7, 0, .2, 1) forwards; }
+@keyframes intro-sai { to { clip-path: polygon(100% 0, 100% 0, 100% 0); visibility: hidden; } }
+.intro__centro { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.intro__tecla {
+  width: 132px; height: 132px; border-radius: 32px; display: grid; place-items: center;
+  background: linear-gradient(165deg, #22344F, var(--tinta-3)); box-shadow: 0 10px 0 var(--sombra), inset 0 1px 0 rgba(255,255,255,.07);
+  animation: intro-chega .4s ease-out both, intro-aperta .24s .5s ease-in-out;
+}
+.intro__tecla svg { width: 92px; height: 92px; overflow: visible; }
+.intro__revela { fill: none; stroke: #fff; stroke-width: 20; stroke-dasharray: 1 1; animation: p-desenha .45s .72s ease-in-out both; }
+.intro__longo { fill: none; stroke: var(--nevoa); stroke-width: 5; stroke-dasharray: 2 9; stroke-linecap: round; }
+.intro__seta { fill: none; stroke: var(--laranja); stroke-width: 12; stroke-linecap: round; stroke-dasharray: 1 1; animation: p-desenha .26s 1.18s cubic-bezier(.7, 0, .25, 1) both; }
+.intro__ponta { fill: none; stroke: var(--laranja); stroke-width: 12; stroke-linecap: round; stroke-linejoin: round; animation: p-surge .18s 1.4s ease-out both; }
+.intro__inicio { fill: var(--laranja); animation: p-surge .2s .7s ease-out both; }
+.intro__marca { display: flex; align-items: center; font: 700 clamp(48px, 9vw, 72px)/1 var(--f-display); letter-spacing: -0.06em; color: var(--texto); }
+.intro__marca span { animation: p-surge .12s calc(1.05s + var(--i) * .06s) both; }
+.intro__marca b { margin-left: 8px; font-size: .36em; letter-spacing: 0; padding: .22em .3em; border-radius: .3em; background: var(--laranja); color: var(--tinta); animation: intro-pop .3s 1.5s cubic-bezier(.3, 1.6, .5, 1) both; }
+.intro__frase { font: 500 15px/1 var(--f-mono); color: var(--nevoa); animation: p-surge .4s 1.65s ease-out both; }
+.intro__pular {
+  position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  display: inline-flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; cursor: pointer;
+  font: 500 14px/1 var(--f-texto); color: var(--texto-2); background: transparent; border: 1px solid var(--linha-2);
+}
+.intro__pular:hover { color: var(--texto); border-color: var(--nevoa); }
+@media (hover: none) { .intro__pular kbd { display: none; } }
+@keyframes intro-chega { from { opacity: 0; translate: 0 18px; scale: .92; } }
+@keyframes intro-aperta { 50% { translate: 0 8px; box-shadow: 0 2px 0 var(--sombra), inset 0 1px 0 rgba(255,255,255,.07); } }
+@keyframes intro-pop { from { opacity: 0; scale: .5; } }
+
+/* ---------- Tec na rolagem (v3) ----------
+   Descida: corre, patina, pula. Subida: de-re, escala, arrasta.
+   --inclina vem do mascote.js (sinal conforme a direção). */
+.tec__svg { transform-origin: 50% 92%; transition: rotate .25s ease-out; }
+.tec.rolando .tec__svg { rotate: var(--inclina, 0deg); }
+.tec.rolando .tec__corpo { animation: none; }
+
+/* descida 1: correndo */
+.tec.rol-corre .tec__perna--e { animation: tec-passo .17s ease-in-out infinite alternate; }
+.tec.rol-corre .tec__perna--d { animation: tec-passo .17s ease-in-out infinite alternate-reverse; }
+.tec.rol-corre .tec__braco--e { animation: tec-braco .17s ease-in-out infinite alternate; }
+.tec.rol-corre .tec__braco--d { animation: tec-braco .17s ease-in-out infinite alternate-reverse; }
+.tec.rol-corre .tec__corpo { animation: tec-balanca .17s ease-in-out infinite alternate; }
+
+/* descida 2: de patinete (pernas paradas, rastro de velocidade) */
+.tec.rol-patina .tec__braco { transform: rotate(-70deg); }
+.tec.rol-patina .tec__sombra { transform: scaleX(1.5); transform-origin: center; }
+.tec.rol-patina .tec__boneco::before {
+  content: ""; position: absolute; right: 88%; top: 34%; width: 46px; height: 34px; pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(138, 151, 171, .7) 0 3px, transparent 3px 11px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000); mask-image: linear-gradient(90deg, transparent, #000);
+  animation: tec-vento .3s linear infinite;
+}
+.tec__boneco { position: relative; }
+@keyframes tec-vento { from { translate: 8px 0; opacity: .4; } to { translate: -10px 0; opacity: 1; } }
+
+/* descida 3: pulando */
+.tec.rol-pula .tec__svg { animation: tec-pulo .38s cubic-bezier(.3, 0, .5, 1) infinite; }
+.tec.rol-pula .tec__perna { transform: rotate(0) scaleY(.75); }
+.tec.rol-pula .tec__braco { transform: rotate(-150deg); }
+@keyframes tec-pulo { 0%, 100% { translate: 0 0; } 50% { translate: 0 -16px; } }
+
+/* subida 1: de ré (moonwalk), olhando para a direita */
+.tec.rol-de-re .tec__perna--e { animation: tec-desliza .3s ease-in-out infinite alternate; }
+.tec.rol-de-re .tec__perna--d { animation: tec-desliza .3s ease-in-out infinite alternate-reverse; }
+.tec.rol-de-re .tec__olhos { transform: translateX(4px) !important; }
+@keyframes tec-desliza { from { transform: translateX(-5px) rotate(-6deg); } to { transform: translateX(5px) rotate(4deg); } }
+
+/* subida 2: escalando (braços para cima, alternando) */
+.tec.rol-escala .tec__braco--e { animation: tec-escala .26s ease-in-out infinite alternate; }
+.tec.rol-escala .tec__braco--d { animation: tec-escala .26s ease-in-out infinite alternate-reverse; }
+.tec.rol-escala .tec__perna--e { animation: tec-passo .26s ease-in-out infinite alternate; }
+.tec.rol-escala .tec__perna--d { animation: tec-passo .26s ease-in-out infinite alternate-reverse; }
+.tec.rol-escala .tec__olhos { transform: translateY(-4px) !important; }
+@keyframes tec-escala { from { transform: rotate(-175deg); } to { transform: rotate(-130deg); } }
+
+/* subida 3: se arrastando, com cara de cansado */
+.tec.rol-arrasta .tec__perna--e { animation: tec-passo .55s ease-in-out infinite alternate; }
+.tec.rol-arrasta .tec__perna--d { animation: tec-passo .55s ease-in-out infinite alternate-reverse; }
+.tec.rol-arrasta .tec__corpo { transform: translateY(4px); }
+.tec.rol-arrasta .tec__braco { transform: rotate(8deg); }
+.tec.rol-arrasta .tec__olho { transform: scaleY(.35); }
+.tec.rol-arrasta .tec__boca { transform: scaleY(-1); transform-origin: center; }
+
+/* freada ao parar */
+.tec.freando .tec__svg { animation: tec-freia .45s ease-out; }
+@keyframes tec-freia { 30% { rotate: -7deg; } 60% { rotate: 3deg; } }
