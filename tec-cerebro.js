@@ -354,6 +354,93 @@
   }
   const fmt = (n, c = 0) => n.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
 
+  /* ---------- Comandos: o Tec faz coisas no site (v3) ----------
+     Só vira comando quando a frase tem um pedido ("me mostra", "leva até",
+     "abre", "calcula", "volta pro topo"...). Perguntas normais continuam
+     indo para a base de conhecimento. O mascote.js executa o resultado. */
+  const PEDIDO = /\b(me mostr\w*|mostr\w*|me lev\w*|lev\w*|vai (para|pra|pro|ate|no|na)|va (para|pra|pro|ate)|ir (para|pra|pro|ate|no|na)|quero ver|deixa eu ver|abr\w*|rol\w*|desc\w*|sob\w*|sub\w*|volt\w*|naveg\w*|cade|onde fica|onde esta|me ensina|exib\w*|apresent\w*)\b/;
+  const ALVOS = [
+    { id: "mapa", nome: "o mapa do atalho", re: /\bmapa\b/, alvo: "#mapa", poleiro: ".mapa__quadro" },
+    { id: "calculadora", nome: "a calculadora", re: /\b(calculadora|calcul\w*|conta de horas)\b/, alvo: "#calculadora", poleiro: ".calc__resultado" },
+    { id: "topo", nome: "o topo", re: /\b(topo|inicio|comeco|home|la em cima|pagina inicial)\b/, alvo: "#topo" },
+    { id: "como", nome: "como funciona", re: /\b(como funciona|processo|passos|etapas|teclas)\b/, alvo: "#como", poleiro: "#acorde .tecla" },
+    { id: "demos", nome: "as demonstrações", re: /\b(demonstra\w*|demos?|exemplos?)\b/, alvo: "#demos", poleiro: ".bento .cartao" },
+    { id: "servicos", nome: "os serviços", re: /\b(servicos?)\b/, alvo: ".servicos" },
+    { id: "setores", nome: "os setores", re: /\b(setor|setores|areas?|segmentos?)\b/, alvo: "#setores", poleiro: ".setores__link" },
+    { id: "projeto", nome: "o projeto entregue", re: /\b(projeto|projetos|portfolio|case|trabalhos?|escritorio de advocacia|advogados)\b/, alvo: "#projeto", poleiro: ".janela" },
+    { id: "duvidas", nome: "as dúvidas", re: /\b(duvidas?|perguntas?|faq)\b/, alvo: "#duvidas", poleiro: ".duvidas__lista details" },
+    { id: "contato", nome: "o contato", re: /\b(contato|enter|final|fim da pagina|rodape|la embaixo)\b/, alvo: "#contato", poleiro: ".enter" },
+    { id: "ferramentas", nome: "as ferramentas", re: /\b(ferramentas|integracoes)\b/, alvo: ".ferramentas" },
+  ];
+  const EXEMPLOS_MAPA = [
+    ["clinica", "clínica", /\b(clinica|consultorio|saude|medic\w*|dentista)\b/],
+    ["loja", "loja", /\b(loja|comercio|varejo|vendas?)\b/],
+    ["escritorio", "escritório", /\b(escritorio|advoc\w*|contab\w*|juridico)\b/],
+    ["agro", "agro", /\b(agro|fazenda|usina|rural)\b/],
+  ];
+  const DUVIDAS = [
+    ["custa", "Quanto custa?", /\b(custa|preco|valor|caro)\b/],
+    ["tempo", "Quanto tempo leva?", /\b(tempo|prazo|demora)\b/],
+    ["dados", "E os dados da minha empresa?", /\b(dados|lgpd|seguranca|seguro)\b/],
+    ["Brasil", "Vocês atendem em todo o Brasil?", /\b(brasil|cidade|atendem|presencial|online)\b/],
+    ["tecnologia", "Preciso entender de tecnologia ou de IA?", /\b(tecnologia|entender|leigo)\b/],
+    ["depois", "E depois da entrega?", /\b(depois|entrega|suporte|manutencao)\b/],
+  ];
+  const TAREFAS_CALC = [
+    ["responder clientes", /\b(client\w*|atend\w*|whats\w*|responder|mensagens?)\b/],
+    ["montar planilhas e relatórios", /\b(planilha\w*|relatorio\w*|excel|dados)\b/],
+    ["ler e organizar documentos", /\b(document\w*|contrato\w*|pdf|papel\w*)\b/],
+    ["agendar e lembrar clientes", /\b(agenda\w*|lembr\w*|consulta\w*|horario\w*)\b/],
+  ];
+  const sorteio = (lista) => lista[Math.floor(Math.random() * lista.length)];
+
+  function comando(texto) {
+    const n = normalizar(texto);
+    const pediu = PEDIDO.test(n);
+
+    // brincadeiras com o próprio Tec
+    if (/\b(pula|pule|salta|salte|danca|dance)\b/.test(n)) return { id: "comando", texto: sorteio(["Pulo encomendado, pulo entregue.", "Lá vai! Nota 10 na aterrissagem, por favor."]), acoes: [], sugestoes: ["Me mostra a calculadora", "Gruda no cursor"], executar: { tipo: "tec", acao: "pular" } };
+    if (/\b(gruda|grude|segue|siga|pega|pegue)\b.*\b(cursor|mouse|ponteiro|setinha)\b/.test(n)) return { id: "comando", texto: "Lá vai o Tec agarrar o seu cursor. Um clique e ele solta.", acoes: [], sugestoes: [], executar: { tipo: "tec", acao: "grudar" } };
+    if (/\b(some|suma|sai daqui|esconde|esconda|vai embora|xo)\b/.test(n)) return { id: "comando", texto: "Tá bom, o Tec sai de fininho. Volta quando você rolar a página.", acoes: [], sugestoes: [], executar: { tipo: "tec", acao: "sumir" } };
+
+    // calculadora com números: "calcula 2 horas por dia com 3 pessoas"
+    const tempo = extrairTempo(texto);
+    if (tempo && /\b(calcul\w*|simul\w*|coloca\w*|coloque|preench\w*|joga|jogue|poe|ponha)\b/.test(n)) {
+      const porDia = tempo.periodo === "dia" ? tempo.minutos : tempo.periodo === "semana" ? tempo.minutos / 5 : tempo.minutos / DIAS_UTEIS;
+      const tarefa = (TAREFAS_CALC.find(([, re]) => re.test(n)) || [null])[0];
+      const min = Math.round(porDia);
+      return {
+        id: "comando",
+        texto: "Pronto: " + fmt(min) + " min por dia, " + tempo.pessoas + (tempo.pessoas > 1 ? " pessoas" : " pessoa") + ". Olha só o tamanho do caminho longo.",
+        acoes: [{ tipo: "whats", rotulo: "Encurtar esse caminho", mensagem: "Olá! Vim pelo site da Atalho IA. Na calculadora deu cerca de " + fmt(tempo.horas) + " horas por mês numa tarefa repetitiva. Quero ver como encurtar." }],
+        sugestoes: ["Quanto custa?", "Me mostra o mapa de uma clínica"],
+        executar: { tipo: "calc", minutos: min, pessoas: tempo.pessoas, tarefa },
+      };
+    }
+    if (!pediu) return null;
+
+    // mapa com exemplo: "mostra o mapa de uma clínica"
+    if (/\bmapa\b/.test(n)) {
+      const ex = EXEMPLOS_MAPA.find(([, , re]) => re.test(n));
+      if (ex) return { id: "comando", texto: "Mapa de " + ex[1] + " montado, com o atalho desenhado. Dá até pra baixar a imagem.", acoes: [], sugestoes: ["Me mostra a calculadora", "Quanto custa?"], executar: { tipo: "mapa", exemplo: ex[0] } };
+    }
+    // dúvida específica: "abre a dúvida sobre preço"
+    if (/\b(duvida|pergunta|faq)\b/.test(n)) {
+      const d = DUVIDAS.find(([, , re]) => re.test(n));
+      if (d) return { id: "comando", texto: "Abrindo a dúvida \"" + d[1] + "\".", acoes: [], sugestoes: ["Me mostra o contato"], executar: { tipo: "duvida", chave: d[0] } };
+    }
+    // busca e atalhos de teclado
+    if (/\b(busca|pesquisa)\b/.test(n)) return { id: "comando", texto: "Busca aberta. Digite para onde quer ir.", acoes: [], sugestoes: [], executar: { tipo: "clicar", alvo: "[data-abrir-paleta]" } };
+    if (/\batalhos?\b.*\bteclado\b|\bteclado\b/.test(n)) return { id: "comando", texto: "Os atalhos do teclado do site. Quem usa, não volta atrás.", acoes: [], sugestoes: [], executar: { tipo: "clicar", alvo: "[data-abrir-atalhos]" } };
+
+    const a = ALVOS.find((x) => x.re.test(n));
+    if (!a) return null;
+    const textos = a.id === "topo"
+      ? ["Subindo tudo de uma vez. Isso sim é atalho.", "Topo, chegando! Segura aí."]
+      : ["Bora! O Tec leva você até " + a.nome + ".", "Atalho ativado: indo para " + a.nome + ".", "Segura que o Tec vai na frente: " + a.nome + "."];
+    return { id: "comando", texto: sorteio(textos), acoes: [], sugestoes: ["Me mostra a calculadora", "Volta pro topo"].filter((s) => normalizar(s) !== n), executar: { tipo: "mostrar", alvo: a.alvo, poleiro: a.poleiro || null, nome: a.nome } };
+  }
+
   /* ---------- Contexto da conversa ---------- */
   const ctx = { ultimo: null, ultimasAcoes: null };
   const SIM = /^(sim|s|quero|pode|pode ser|bora|claro|ok|okay|beleza|blz|vamos|manda|isso|com certeza|uhum|aham)$/;
@@ -385,6 +472,10 @@
       if (it) return { texto: it.detalhe || it.resposta + " Se quiser, a equipe explica com exemplos do seu caso no WhatsApp.", acoes: it.detalhe ? it.acoes || [] : [{ tipo: "whats", rotulo: "Conversar no WhatsApp" }], sugestoes: it.sugestoes || [] };
     }
 
+    // pedidos para o Tec fazer algo no site ("me mostra a calculadora")
+    const cmd = comando(texto);
+    if (cmd) { ctx.ultimo = null; ctx.ultimasAcoes = cmd.acoes.length ? cmd.acoes : null; return cmd; }
+
     // contas: "gasto 2 horas por dia respondendo clientes, somos 3"
     const tempo = extrairTempo(texto);
     if (tempo && tempo.horas >= 1) {
@@ -394,7 +485,8 @@
         texto: "Fazendo a conta: isso dá cerca de " + fmt(tempo.horas) + " horas por mês" + desc + ", ou " + fmt(dias, dias < 10 ? 1 : 0) + " dias inteiros de trabalho, todo mês, nessa tarefa. É exatamente o tipo de caminho longo que dá para encurtar.",
         acoes: [
           { tipo: "whats", rotulo: "Encurtar esse caminho", mensagem: "Olá! Vim pelo site da Atalho IA. Hoje gastamos cerca de " + fmt(tempo.horas) + " horas por mês em uma tarefa repetitiva: \"" + texto.trim() + "\". Quero ver como encurtar." },
-          { tipo: "secao", rotulo: "Abrir a calculadora", alvo: "#calculadora" },
+          // (v3) o botão já preenche a calculadora com os números da frase
+          { tipo: "calc", rotulo: "Ver na calculadora", minutos: Math.round(tempo.periodo === "dia" ? tempo.minutos : tempo.periodo === "semana" ? tempo.minutos / 5 : tempo.minutos / DIAS_UTEIS), pessoas: tempo.pessoas },
         ],
         sugestoes: ["Quanto custa?", "Como funciona?"],
       };

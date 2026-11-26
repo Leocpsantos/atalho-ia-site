@@ -8,8 +8,10 @@
    ========================================================== */
 (function () {
   const WHATS = "5518996141788";
-  const calmo = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const fino = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  // "reduzir movimento" do sistema desliga as animações; ?movimento na URL liga de novo (para testar)
+  const calmo = !/[?&]movimento\b/.test(location.search) && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // any-*: notebooks com tela de toque também contam como "tem mouse"
+  const fino = window.matchMedia("(any-hover: hover) and (any-pointer: fine)").matches;
   const $ = (s, el = document) => el.querySelector(s);
 
   const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sem armazenamento */ } };
@@ -170,6 +172,8 @@
 
   /* ---------- Balão de fala ---------- */
   function falar(texto, botoes) {
+    // uma fala nova cancela o "fechar sozinho" da fala anterior (senão ele fecharia o convite)
+    clearTimeout(timerRapido);
     fala.textContent = texto;
     acoes.innerHTML = "";
     (botoes || []).forEach(([rotulo, acao, principal]) => {
@@ -279,18 +283,119 @@
   /* ---------- Assistente: usa o cérebro (tec-cerebro.js) ---------- */
   const MSG_PADRAO = "Olá! Vim pelo site da Atalho IA e quero conversar.";
 
-  function irParaSecao(alvo) {
-    fecharChat();
-    const el = document.querySelector(alvo);
-    if (!el) return;
-    const topo = window.scrollY + el.getBoundingClientRect().top - 90;
+  /* ---------- Comandos: o Tec faz coisas no site (v3) ----------
+     O cérebro (tec-cerebro.js) devolve { executar: { tipo, ... } } quando a
+     pessoa pede algo ("me mostra a calculadora", "calcula 2 h com 3 pessoas",
+     "abre o mapa de uma clínica"...). Aqui o Tec rola até lá, mexe na página
+     e vai junto, pulando em cima do que mostrou. */
+  const aguardar = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  function rolarAte(el, folga = 90) {
+    const topo = window.scrollY + el.getBoundingClientRect().top - folga;
     window.scrollTo({ top: Math.max(0, topo), behavior: calmo ? "auto" : "smooth" });
+    return aguardar(calmo ? 60 : 950);
+  }
+  function destacar(el, ms = 2800) {
+    el.classList.add("tec-destaque");
+    setTimeout(() => el.classList.remove("tec-destaque"), ms);
+  }
+  async function irJunto(el, texto) {
+    if (!el) return;
+    if (!calmo) {
+      const r = el.getBoundingClientRect();
+      if (r.top > 190 && r.top < window.innerHeight - 120 && r.width >= larg + 10) {
+        pularPara(el, r.left + Math.min(r.width * 0.2, 140) + larg / 2);
+        await aguardar(900);
+      } else await andarAte(Math.max(MARGEM, r.left + 10));
+    }
+    if (texto) falarRapido(texto);
+  }
+  async function mostrarNoSite(alvo, poleiro, nome) {
+    fecharChat();
+    if (alvo === "#topo") {
+      window.scrollTo({ top: 0, behavior: calmo ? "auto" : "smooth" });
+      await aguardar(calmo ? 60 : 1000);
+      feliz();
+      falarRapido("Topo! Rápido assim é que é atalho.");
+      return;
+    }
+    const sec = document.querySelector(alvo);
+    if (!sec) return;
+    await rolarAte(sec);
+    const el = (poleiro && (sec.querySelector(poleiro) || document.querySelector(poleiro))) || sec.querySelector("h2") || sec;
+    destacar(el);
+    await irJunto(el, nome ? "Chegamos: " + nome + "." : "");
+  }
+  function ajustarControle(id, valor) {
+    const el = document.getElementById(id);
+    if (!el || valor == null) return;
+    const min = Number(el.min), max = Number(el.max), passo = Number(el.step) || 1;
+    el.value = String(Math.max(min, Math.min(max, Math.round(valor / passo) * passo)));
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  async function preencherCalculadora(a) {
+    fecharChat();
+    const sec = document.querySelector("#calculadora");
+    if (!sec) return;
+    await rolarAte(sec, 70);
+    if (a.tarefa) { const chip = sec.querySelector('.calc__chip[data-tarefa="' + a.tarefa + '"]'); if (chip) chip.click(); }
+    ajustarControle("calc-min", a.minutos);
+    ajustarControle("calc-pes", a.pessoas);
+    const res = sec.querySelector(".calc__resultado");
+    if (res) { destacar(res, 3400); await irJunto(res, "Olha o resultado aqui, embaixo do Tec."); }
+  }
+  async function montarMapa(a) {
+    fecharChat();
+    const sec = document.querySelector("#mapa");
+    if (!sec) return;
+    await rolarAte(sec, 70);
+    const chip = sec.querySelector('[data-exemplo="' + a.exemplo + '"]');
+    if (chip) chip.click();
+    await aguardar(450);
+    const botao = document.getElementById("mapa-atalho");
+    if (botao) botao.click();
+    const quadro = sec.querySelector(".mapa__quadro");
+    if (quadro) { destacar(quadro, 3400); await irJunto(quadro, "Atalho desenhado: os passos laranja a IA assume."); }
+  }
+  async function abrirDuvida(a) {
+    fecharChat();
+    const d = Array.from(document.querySelectorAll(".duvidas__lista details")).find((item) => item.querySelector("summary").textContent.includes(a.chave));
+    if (!d) return mostrarNoSite("#duvidas", ".duvidas__lista details", "as dúvidas");
+    await rolarAte(d, 160);
+    if (!d.open) d.querySelector("summary").click();
+    destacar(d, 3000);
+    await aguardar(300);
+    irJunto(d, "");
+  }
+  function fazerTec(o) {
+    fecharChat();
+    if (o === "pular") {
+      const el = escolherPoleiro();
+      if (el) pularPara(el); else pularPara(null, x + 140);
+    } else if (o === "grudar") {
+      if (fino && mouse.x > 0) grudar(FALAS.grudar[0]);
+      else { pularPara(null, x + 120); falarRapido("No celular não tem cursor pra segurar. Fica o pulo."); }
+    } else if (o === "sumir") {
+      motor.sumido = true;
+      descer().then(() => {
+        raiz.classList.add("andando", "para-esquerda");
+        colocar(-larg - 40, 0, 1.1);
+        setTimeout(() => raiz.classList.remove("andando", "para-esquerda"), 1150);
+      });
+      // volta sozinho depois de um tempo, se ninguém rolar a página antes
+      setTimeout(() => { if (motor.sumido) { motor.sumido = false; andarAte(MARGEM).then(() => falarRapido("Voltou! Sentiu falta, né?")); } }, 40000);
+    }
   }
   function executar(acao) {
     if (!acao) return;
     if (acao.tipo === "whats") abrirWhats(acao.mensagem || MSG_PADRAO);
     else if (acao.tipo === "tour") iniciarTour();
-    else if (acao.tipo === "secao") irParaSecao(acao.alvo);
+    else if (acao.tipo === "secao" || acao.tipo === "mostrar") mostrarNoSite(acao.alvo, acao.poleiro, acao.nome);
+    else if (acao.tipo === "calc") preencherCalculadora(acao);
+    else if (acao.tipo === "mapa") montarMapa(acao);
+    else if (acao.tipo === "duvida") abrirDuvida(acao);
+    else if (acao.tipo === "clicar") { const el = document.querySelector(acao.alvo); if (el) { fecharChat(); el.click(); } }
+    else if (acao.tipo === "tec") fazerTec(acao.acao);
   }
 
   // reserva caso o cérebro não carregue
@@ -335,7 +440,7 @@
   }
 
   // sugestões abaixo da conversa mudam conforme o assunto
-  const SUGESTOES_INICIAIS = ["O que vocês fazem?", "Quanto custa?", "Quanto tempo leva?", "Fazer um tour pelo site", "Falar no WhatsApp"];
+  const SUGESTOES_INICIAIS = ["Me mostra a calculadora", "O que vocês fazem?", "Quanto custa?", "Fazer um tour pelo site", "Falar no WhatsApp"];
   function mostrarSugestoes(lista) {
     atalhos.innerHTML = "";
     (lista && lista.length ? lista : SUGESTOES_INICIAIS).slice(0, 4).forEach((s) => {
@@ -367,7 +472,7 @@
       adicionarMsg("tec", r.texto, r.acoes);
       mostrarSugestoes(r.sugestoes);
       if (r.naoEntendeu) piscar(); else if (!r.executar) feliz();
-      if (r.executar) setTimeout(() => executar(r.executar), 400);
+      if (r.executar) setTimeout(() => executar(r.executar), 1100);
     }, espera);
   }
 
@@ -397,7 +502,7 @@
     raiz.classList.add("chat-aberto");
     if (!chatIniciado) {
       chatIniciado = true;
-      adicionarMsg("tec", "Oi! Aqui é o Tec, assistente da Atalho IA. Pergunte do seu jeito sobre serviços, preço, prazo ou o seu setor.\n\nDica: conte quanto tempo uma tarefa leva, como \"2 horas por dia, 3 pessoas\", e o Tec faz a conta do mês.");
+      adicionarMsg("tec", "Oi! Aqui é o Tec, assistente da Atalho IA. Pergunte do seu jeito sobre serviços, preço, prazo ou o seu setor.\n\nDica: conte quanto tempo uma tarefa leva, como \"2 horas por dia, 3 pessoas\", e o Tec faz a conta do mês.\n\nE dá pra pedir coisas: \"me mostra o projeto\", \"calcula 1 hora por dia com 3 pessoas\", \"abre o mapa de uma loja\" ou \"volta pro topo\".");
     }
     acenar();
     setTimeout(() => campo.focus({ preventScroll: true }), 50);
@@ -423,6 +528,13 @@
       ["Mostrar o site", iniciarTour, true],
       ["Agora não", () => { guardar("tec-visto", "1"); calar(); }],
     ]);
+    setTimeout(() => {
+      if (!balao.hidden && acoes.children.length > 0 && fala.textContent.startsWith("Oi! Aqui é o Tec")) {
+        guardar("tec-visto", "1");
+        calar();
+        falarRapido("Fica pra depois, então. O tour está guardado: é só clicar no Tec.");
+      }
+    }, 9000);
   }
   if (ler("tec-visto")) {
     raiz.classList.add("pronto");
@@ -438,8 +550,12 @@
       apresentar();
     }, calmo ? 600 : 4400); // (v3) espera a cena do topo terminar antes de entrar
     // com a abertura, conta o tempo a partir de quando ela sai
-    if (document.documentElement.classList.contains("com-intro") && !window.atalhoIntroFim) document.addEventListener("atalho:intro-fim", entrar, { once: true });
-    else entrar();
+    let entrou = false;
+    const entrarUmaVez = () => { if (!entrou) { entrou = true; entrar(); } };
+    if (document.documentElement.classList.contains("com-intro") && !window.atalhoIntroFim) {
+      document.addEventListener("atalho:intro-fim", entrarUmaVez, { once: true });
+      setTimeout(entrarUmaVez, 6000);
+    } else entrarUmaVez();
   }
 
   /* ==========================================================
@@ -617,6 +733,7 @@
     fila.forEach((f) => f());
   }
   function descer() {
+    if (motor.modo === "grudado") { raiz.classList.remove("grudado"); svgBoneco.style.rotate = ""; }
     if (y <= 0 && motor.modo !== "pulando") { motor.modo = "chao"; return Promise.resolve(); }
     return new Promise((ok) => { motor.aoChao.push(ok); if (motor.modo !== "caindo") cair(false); });
   }
@@ -660,6 +777,9 @@
       motor.el = p.el;
       motor.dx = p.dx;
       motor.anunciouCarona = false;
+      // o elemento pode mudar de lugar sem rolagem (calculadora, dúvida abrindo...): confere 3x por segundo
+      clearInterval(motor.vigia);
+      motor.vigia = setInterval(() => { if (motor.modo === "empoleirado") ligarMotor(); else clearInterval(motor.vigia); }, 330);
       const tipo = POLEIROS.find(([s]) => p.el.matches(s));
       if (tipo && Math.random() < 0.65) comentar(proxima("poleiro" + tipo[0], tipo[1]), 5000);
     } else {
@@ -742,7 +862,7 @@
       if (ocupado() || calmo) return;
       const alvo = e.target instanceof Element ? e.target : null;
       if (!alvo || alvo.closest(INTERATIVO)) return;
-      if (Date.now() - ultimoChamado < 2500) return;
+      if (Date.now() - ultimoChamado < 2500 || motor.modo === "pulando" || motor.modo === "caindo") return;
       ultimoChamado = Date.now();
       const poleiro = alvo.closest(SELETOR_POLEIRO);
       if (poleiro) {
@@ -811,9 +931,11 @@
     function aoRolar() {
       quadroRol = 0;
       const yPag = window.scrollY;
+      if (emTour || !chat.hidden) { ultimaY = yPag; return; }
+      if (Math.abs(yPag - ultimaY) < 1) return; // rolagem lenta (touchpad, zoom) acumula
       const dy = yPag - ultimaY;
       ultimaY = yPag;
-      if (emTour || !chat.hidden || Math.abs(dy) < 1) return;
+      motor.sumido = false;
       ultimaRolagem = performance.now();
       atividade();
       // rolar a página responde o convite do tour com um "agora não"
@@ -889,11 +1011,14 @@
     window.addEventListener("keydown", atividade);
     window.addEventListener("touchstart", atividade, { passive: true });
 
-    function agendar() { setTimeout(acaoSozinho, 3500 + Math.random() * 4500); }
+    function agendar() { setTimeout(acaoSozinho, 2500 + Math.random() * 3500); }
     function acaoSozinho() {
       agendar();
       if (document.hidden || ocupado() || modo || dormindo) return;
-      if (!raiz.classList.contains("pronto") || x < -40 || x > window.innerWidth) return;
+      if (!raiz.classList.contains("pronto") || motor.sumido) return;
+      // primeira visita: espera o Tec entrar e o convite acontecer (ou a pessoa rolar)
+      if (!ler("tec-visto") && !window.tecRolou) return;
+      if (x < -40 || x > window.innerWidth) { andarAte(MARGEM); return; }
       if (motor.modo === "pulando" || motor.modo === "caindo" || motor.modo === "grudado") return;
       if (performance.now() - ultimaRolagem < 1200) return;
       const parado = Date.now() - ultimaAtividade;
@@ -916,7 +1041,7 @@
       pularPara(null, x + (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 160));
     }
     // começa a agir depois da entrada (e da abertura, se houver)
-    setTimeout(agendar, 6000);
+    setTimeout(acaoSozinho, 2600);
   }
 
   // usado pelos atalhos de teclado e pelo easter egg (interacoes.js)
