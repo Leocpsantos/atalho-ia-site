@@ -30,28 +30,46 @@
   const contato = document.querySelector("#contato");
   const preenchimento = nav.querySelector(".trilho__linha i");
 
+  // (v3) as posições das seções ficam guardadas: rolar só faz contas, sem medir a página
+  const largo = window.matchMedia("(min-width: 1380px) and (hover: hover)");
+  let topos = [], heroFim = 0, contatoTopo = Infinity;
+  const abs = (el) => el.getBoundingClientRect().top + window.scrollY;
+  function medir() {
+    topos = secoes.map(abs);
+    heroFim = hero ? abs(hero) + hero.offsetHeight : 0;
+    contatoTopo = contato ? abs(contato) : Infinity;
+    atualizar();
+  }
   let quadro = 0;
+  let ativaAntes = -2, visivelAntes = null;
   function atualizar() {
     quadro = 0;
-    const meio = window.innerHeight * 0.4;
+    if (!largo.matches) return;
+    const y = window.scrollY, vh = window.innerHeight;
+    const meio = y + vh * 0.4;
     let ativa = -1;
-    secoes.forEach((s, i) => { if (s.getBoundingClientRect().top <= meio) ativa = i; });
-    links.forEach((a, i) => {
-      a.classList.toggle("ativa", i === ativa);
-      a.classList.toggle("passou", i < ativa);
-      if (i === ativa) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
-    });
+    topos.forEach((t, i) => { if (t <= meio) ativa = i; });
+    if (ativa !== ativaAntes) {
+      ativaAntes = ativa;
+      links.forEach((a, i) => {
+        a.classList.toggle("ativa", i === ativa);
+        a.classList.toggle("passou", i < ativa);
+        if (i === ativa) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current");
+      });
+    }
     // progresso entre a primeira e a última parada
-    const ini = secoes[0].getBoundingClientRect().top + window.scrollY - meio;
-    const fim = (contato || secoes[secoes.length - 1]).getBoundingClientRect().top + window.scrollY - meio;
-    const p = Math.min(1, Math.max(0, (window.scrollY - ini) / Math.max(1, fim - ini)));
-    preenchimento.style.scale = "1 " + p.toFixed(4);
+    const ini = topos[0] - vh * 0.4, fim = (contatoTopo === Infinity ? topos[topos.length - 1] : contatoTopo) - vh * 0.4;
+    const p = Math.min(1, Math.max(0, (y - ini) / Math.max(1, fim - ini)));
+    preenchimento.style.transform = "scaleY(" + p.toFixed(4) + ")";
     // só aparece depois do topo e some no contato final
-    const passouHero = hero ? hero.getBoundingClientRect().bottom < window.innerHeight * 0.5 : true;
-    const noFim = contato ? contato.getBoundingClientRect().top < window.innerHeight * 0.6 : false;
-    nav.classList.toggle("on", passouHero && !noFim);
+    const visivel = heroFim < y + vh * 0.5 && contatoTopo > y + vh * 0.6;
+    if (visivel !== visivelAntes) { visivelAntes = visivel; nav.classList.toggle("on", visivel); }
   }
   window.addEventListener("scroll", () => { if (!quadro) quadro = requestAnimationFrame(atualizar); }, { passive: true });
-  window.addEventListener("resize", atualizar);
-  atualizar();
+  window.addEventListener("resize", medir);
+  if ("ResizeObserver" in window) {
+    let espera = 0;
+    new ResizeObserver(() => { clearTimeout(espera); espera = setTimeout(medir, 120); }).observe(document.body);
+  }
+  medir();
 })();

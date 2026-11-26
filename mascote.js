@@ -93,33 +93,41 @@
   const form = $(".tec-chat__form", raiz);
   const campo = $("#tec-pergunta");
 
-  /* ---------- Posição e caminhada ---------- */
+  /* ---------- Posição e caminhada ----------
+     (v3) O Tec é posicionado direto por transform (x para os lados, y = altura
+     acima do rodapé da tela). Medidas ficam guardadas: nada de medir a cada quadro. */
   const MARGEM = 16;
   let x = MARGEM;
-  function largura() { return boneco.getBoundingClientRect().width || 72; }
-  function aplicarX(px) { raiz.style.setProperty("--x", px + "px"); }
-  aplicarX(x);
+  let y = 0;
+  let larg = 72, alt = 90;
+  const svgBoneco = $(".tec__boneco .tec__svg", raiz);
+  function medirBoneco() { const r = boneco.getBoundingClientRect(); if (r.width) { larg = r.width; alt = r.height; } }
+  function largura() { return larg; }
+  // linha do "chão": onde ficam os pés do Tec quando y = 0
+  function chaoY() { return window.innerHeight - 14; }
+  function colocar(px, py = y, dur = 0, curva = "linear") {
+    x = px; y = Math.max(0, py);
+    raiz.style.transition = dur ? "transform " + dur + "s " + curva : "none";
+    raiz.style.transform = "translate3d(" + px.toFixed(1) + "px," + (-y).toFixed(1) + "px,0)";
+  }
+  function aplicarX(px) { colocar(px, y, 0); }
+  colocar(x, 0);
+  requestAnimationFrame(medirBoneco);
+  window.addEventListener("resize", medirBoneco);
 
-  function andarAte(alvoX) {
-    const max = window.innerWidth - largura() - MARGEM;
+  async function andarAte(alvoX) {
+    // se estiver em cima de algum elemento ou no ar, primeiro desce
+    if (y > 0) await descer();
+    const max = window.innerWidth - larg - MARGEM;
     const destino = Math.max(MARGEM, Math.min(max, alvoX));
     const dist = Math.abs(destino - x);
-    return new Promise((ok) => {
-      if (dist < 4 || calmo) {
-        x = destino;
-        raiz.style.setProperty("--dur", "0s");
-        aplicarX(x);
-        ok();
-        return;
-      }
-      const dur = Math.min(2.6, Math.max(0.6, dist / 420));
-      raiz.style.setProperty("--dur", dur + "s");
-      raiz.classList.add("andando");
-      raiz.classList.toggle("para-esquerda", destino < x);
-      x = destino;
-      aplicarX(x);
-      setTimeout(() => { raiz.classList.remove("andando", "para-esquerda"); ok(); }, dur * 1000 + 60);
-    });
+    if (dist < 4 || calmo) { colocar(destino, 0, 0); return; }
+    const dur = Math.min(2.6, Math.max(0.6, dist / 420));
+    raiz.classList.add("andando");
+    raiz.classList.toggle("para-esquerda", destino < x);
+    colocar(destino, 0, dur);
+    await new Promise((ok) => setTimeout(ok, dur * 1000 + 60));
+    raiz.classList.remove("andando", "para-esquerda");
   }
 
   /* ---------- Expressões ---------- */
@@ -150,9 +158,8 @@
       if (quadro) return;
       quadro = requestAnimationFrame(() => {
         quadro = 0;
-        const r = boneco.getBoundingClientRect();
-        const cx = r.left + r.width / 2;
-        const cy = r.top + r.height * 0.42;
+        const cx = x + larg / 2;
+        const cy = chaoY() - y - alt * 0.58;
         const dx = e.clientX - cx;
         const dy = e.clientY - cy;
         const d = Math.hypot(dx, dy) || 1;
@@ -175,8 +182,7 @@
     });
     balao.hidden = false;
     // o balão abre para o lado com mais espaço
-    const r = boneco.getBoundingClientRect();
-    raiz.classList.toggle("balao-esquerda", r.left > window.innerWidth / 2);
+    raiz.classList.toggle("balao-esquerda", x + larg / 2 > window.innerWidth / 2);
     balao.classList.remove("entra");
     void balao.offsetWidth;
     balao.classList.add("entra");
@@ -384,8 +390,8 @@
   function abrirChat() {
     if (emTour) encerrar();
     calar();
-    // o chat abre a partir do canto esquerdo; se o Tec correu para longe, ele volta
-    if (x > MARGEM + 4) andarAte(MARGEM);
+    // o chat abre a partir do canto esquerdo; se o Tec está longe (ou lá em cima), ele volta
+    if (x > MARGEM + 4 || y > 0) andarAte(MARGEM);
     chat.hidden = false;
     boneco.setAttribute("aria-expanded", "true");
     raiz.classList.add("chat-aberto");
@@ -421,9 +427,7 @@
   if (ler("tec-visto")) {
     raiz.classList.add("pronto");
   } else {
-    x = -140;
-    raiz.style.setProperty("--dur", "0s");
-    aplicarX(x);
+    colocar(-140, 0);
     raiz.classList.add("pronto");
     const entrar = () => setTimeout(async () => {
       // se a pessoa já começou a rolar, o Tec já entrou correndo: sem convite
@@ -438,10 +442,18 @@
     else entrar();
   }
 
-  /* ---------- Tec na rolagem (v3) ----------
-     Rolar para baixo faz o Tec correr para a direita; para cima, para a esquerda.
-     Ele atravessa a tela inteira: sai por um lado e entra pelo outro. Cada rolada sorteia um jeito diferente (sem repetir o anterior) e, de vez
-     em quando, ele solta um comentário. A voz continua de empresa: sem "eu". */
+  /* ==========================================================
+     Tec livre (v3)
+     - Rolagem: corre na direção da rolagem e atravessa a tela (sai por um
+       lado, entra pelo outro). 3 jeitos de descer e 3 de subir.
+     - Sozinho: pula em cima de títulos, cartões, teclas e botões; quando a
+       página rola, vai de carona no elemento e cai quando ele sai da tela.
+     - Cursor: às vezes (ou se o mouse ficar parado em cima dele) gruda no
+       cursor e vai pendurado, balançando. Clique ou rolagem fazem ele soltar.
+     - Duplo clique (ou toque, no celular) num espaço vazio: ele pula até lá.
+     - Muito tempo sem mexer: dorme. Qualquer movimento acorda.
+     Voz de empresa: o Tec nunca diz "eu".
+     ========================================================== */
   const MODOS = { 1: ["corre", "patina", "pula"], [-1]: ["de-re", "escala", "arrasta"] };
   const FALAS = {
     descida: [
@@ -479,31 +491,288 @@
       "De volta ao começo. O caminho mais curto continua aqui.",
       "Topo de novo. Se quiser um tour guiado, é só clicar no Tec.",
     ],
+    grudar: [
+      "Peguei o cursor! Agora o Tec vai junto.",
+      "Carona no cursor. Economia de perna.",
+      "Pra onde a gente vai? O Tec só segura.",
+    ],
+    grudarParado: ["Ficou parado em cima do Tec? Então agora ele vai junto."],
+    soltar: [
+      "Cansou. O Tec volta pro chão.",
+      "Chega de passeio. O cursor é todo seu de novo.",
+      "Pendurado cansa. Até já.",
+    ],
+    soltarClique: ["Tá bom, tá bom, o Tec solta.", "Clicou, soltou. Combinado."],
+    soltarRolagem: ["Opa! A página fugiu.", "Segura que lá vem rolagem… ou não."],
+    caiu: ["Opa! Ninguém viu isso.", "Caiu, levantou. Faz parte.", "Aterrissagem nota 7. Dá pra melhorar."],
+    carona: ["Carona no elemento. Segura!", "Esse aqui anda sozinho? Que beleza."],
+    chamar: ["Chamou? O Tec chegou.", "Pronto, apareceu. Precisava de algo?"],
+    acordar: ["Acordado! Só estava economizando bateria.", "Ninguém viu o Tec cochilando, combinado?"],
+    passarPor: {
+      wa: "Clica! É ali que a conversa começa.",
+      campo: "Escreve aí, o Tec não espia.",
+      calc: "Mexe nesse controle e vê o tamanho do caminho longo.",
+    },
   };
-  // cada lista é embaralhada e usada até o fim antes de repetir
+  // falas de quando ele pousa em cada tipo de elemento
+  const POLEIROS = [
+    [".enter", ["Essa tecla aqui resolve tudo. Só apertar.", "Pisando na tecla mais importante do site."]],
+    [".calc__resultado", ["Esses números assustam, né?", "Quanto tempo, hein? Daqui de cima dá pra ver."]],
+    [".mapa__quadro", ["Daqui dá pra ver o atalho inteiro."]],
+    [".tecla", ["Pisando na tecla certa.", "Tecla testada e aprovada."]],
+    [".paleta", ["Escreve aí embaixo, o Tec espera."]],
+    [".janela", ["Esse site aqui ficou bonito, hein?"]],
+    [".cartao", ["Vista privilegiada daqui de cima.", "Esse cartão aguenta o peso do Tec? Aguenta."]],
+    [".setores__link", ["Achou o seu setor? O Tec espera."]],
+    ["details", ["Dúvida? O Tec também tinha. Abre aí."]],
+    ["h2", ["Sentado no título, que é pra ser notado.", "Daqui de cima o título parece até maior."]],
+    [".projeto__link", ["Clica aí que o site está no ar de verdade."]],
+  ];
+  const SELETOR_POLEIRO = POLEIROS.map((p) => p[0]).join(",");
   const filas = {};
   function proxima(chave, lista) {
     if (!filas[chave] || !filas[chave].length) filas[chave] = lista.slice().sort(() => Math.random() - 0.5);
     return filas[chave].pop();
   }
+  let ultimaFala = 0;
+  function podeFalar(intervalo) { return Date.now() - ultimaFala > intervalo; }
+  function comentar(texto, intervalo = 0) {
+    if (!texto || !podeFalar(intervalo) || emTour || !chat.hidden) return;
+    if (!balao.hidden && acoes.children.length > 0) return; // não atropela o convite do tour
+    ultimaFala = Date.now();
+    falarRapido(texto);
+  }
+
+  /* ---------- Motor: pulos, carona, queda, grude ---------- */
+  const motor = { modo: "chao", el: null, dx: 0, pulo: null, vy: 0, rodando: false, antes: 0, aoChao: [], fimGrude: 0, passou: {} };
+  const mouse = { x: -999, y: -999, visto: 0 };
+  let ultimaRolagem = 0;
+  const balaoComConvite = () => !balao.hidden && acoes.children.length > 0;
+  const ocupado = () => emTour || !chat.hidden || balaoComConvite();
+
+  function ligarMotor() {
+    if (motor.rodando || calmo) return;
+    motor.rodando = true;
+    motor.antes = performance.now();
+    requestAnimationFrame(passoMotor);
+  }
+  function passoMotor(agora) {
+    const dt = Math.min(0.05, Math.max(0.001, (agora - motor.antes) / 1000));
+    motor.antes = agora;
+    let continuar = false;
+    if (motor.modo === "pulando") {
+      const p = motor.pulo;
+      p.t = Math.min(1, p.t + dt / p.dur);
+      // se o alvo é um elemento, acompanha ele (a página pode ter rolado no meio do pulo)
+      if (p.el) { const r = p.el.getBoundingClientRect(); p.y1 = chaoY() - r.top; p.x1 = r.left + p.dx; }
+      const t = p.t;
+      const px = p.x0 + (p.x1 - p.x0) * t;
+      const py = p.y0 + (p.y1 - p.y0) * t + p.h * 4 * t * (1 - t);
+      colocar(px, py);
+      if (t >= 1) pousar(); else continuar = true;
+    } else if (motor.modo === "empoleirado") {
+      const el = motor.el;
+      const r = el.isConnected ? el.getBoundingClientRect() : null;
+      if (!r || r.top < 170 || r.top > window.innerHeight - 40 || r.width < larg * 0.6) { cair(true); continuar = true; }
+      else {
+        const nx = Math.max(r.left, Math.min(r.right - larg, r.left + motor.dx));
+        colocar(nx, chaoY() - r.top);
+        continuar = performance.now() - ultimaRolagem < 350; // só gasta quadro enquanto a página rola
+      }
+    } else if (motor.modo === "caindo") {
+      motor.vy -= 2800 * dt;
+      let ny = y + motor.vy * dt;
+      if (ny <= 0) {
+        ny = 0;
+        if (motor.vy < -420) { motor.vy = -motor.vy * 0.3; quicar(); continuar = true; colocar(x, 0); }
+        else { colocar(x, 0); chegouNoChao(); }
+      } else { colocar(x, ny); continuar = true; }
+    } else if (motor.modo === "grudado") {
+      // pendurado logo abaixo do cursor, com mola e balanço
+      const alvoX = mouse.x - larg / 2;
+      const alvoY = Math.max(0, chaoY() - (mouse.y + 4) - alt);
+      const vx = (alvoX - x) * 0.2;
+      colocar(x + vx, y + (alvoY - y) * 0.2);
+      svgBoneco.style.rotate = Math.max(-28, Math.min(28, -vx * 1.4)).toFixed(1) + "deg";
+      if (performance.now() > motor.fimGrude) soltar(proxima("soltar", FALAS.soltar));
+      continuar = motor.modo === "grudado" || motor.modo === "caindo";
+    }
+    if (!balao.hidden && (motor.modo !== "empoleirado" || continuar)) encaixarBalao();
+    if (continuar) requestAnimationFrame(passoMotor);
+    else motor.rodando = false;
+  }
+
+  function quicar() {
+    raiz.classList.remove("quique");
+    void raiz.offsetWidth; // reinicia a animação
+    raiz.classList.add("quique");
+    setTimeout(() => raiz.classList.remove("quique"), 360);
+  }
+  function chegouNoChao() {
+    motor.modo = "chao";
+    motor.el = null;
+    raiz.classList.remove("no-ar", "para-esquerda");
+    quicar();
+    const fila = motor.aoChao.splice(0);
+    fila.forEach((f) => f());
+  }
+  function descer() {
+    if (y <= 0 && motor.modo !== "pulando") { motor.modo = "chao"; return Promise.resolve(); }
+    return new Promise((ok) => { motor.aoChao.push(ok); if (motor.modo !== "caindo") cair(false); });
+  }
+  function cair(comFala) {
+    if (motor.modo === "grudado") { raiz.classList.remove("grudado"); svgBoneco.style.rotate = ""; }
+    motor.modo = "caindo";
+    motor.el = null;
+    motor.vy = 0;
+    raiz.classList.add("no-ar");
+    if (comFala && Math.random() < 0.5) comentar(proxima("caiu", FALAS.caiu), 5000);
+    ligarMotor();
+  }
+
+  // pulo em arco até um elemento (ou até um ponto do chão, se el for nulo)
+  function pularPara(el, xDesejado) {
+    if (calmo) return;
+    let x1, y1 = 0, dx = 0;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const livre = Math.max(0, r.width - larg);
+      x1 = xDesejado != null ? Math.max(r.left, Math.min(r.right - larg, xDesejado - larg / 2)) : r.left + Math.random() * livre;
+      y1 = chaoY() - r.top;
+      dx = x1 - r.left;
+    } else {
+      x1 = Math.max(MARGEM, Math.min(window.innerWidth - larg - MARGEM, xDesejado != null ? xDesejado : x));
+    }
+    if (motor.modo === "grudado") { raiz.classList.remove("grudado"); svgBoneco.style.rotate = ""; }
+    const dist = Math.hypot(x1 - x, y1 - y);
+    motor.pulo = { x0: x, y0: y, x1, y1, dx, el, t: 0, h: Math.min(200, 50 + dist * 0.25), dur: Math.min(0.95, 0.4 + dist / 1800) };
+    motor.modo = "pulando";
+    raiz.classList.add("no-ar");
+    raiz.classList.toggle("para-esquerda", x1 < x);
+    ligarMotor();
+  }
+  function pousar() {
+    const p = motor.pulo;
+    raiz.classList.remove("no-ar", "para-esquerda");
+    quicar();
+    if (p.el && p.el.isConnected) {
+      motor.modo = "empoleirado";
+      motor.el = p.el;
+      motor.dx = p.dx;
+      motor.anunciouCarona = false;
+      const tipo = POLEIROS.find(([s]) => p.el.matches(s));
+      if (tipo && Math.random() < 0.65) comentar(proxima("poleiro" + tipo[0], tipo[1]), 5000);
+    } else {
+      motor.modo = "chao";
+      colocar(x, 0);
+      const fila = motor.aoChao.splice(0);
+      fila.forEach((f) => f());
+    }
+  }
+
+  // escolhe um lugar visível para pousar (com espaço acima para o balão)
+  function escolherPoleiro() {
+    const vh = window.innerHeight, vw = window.innerWidth;
+    const candidatos = Array.from(document.querySelectorAll(SELETOR_POLEIRO)).filter((el) => {
+      if (el.closest(".tec, .cmdk, [hidden]")) return false;
+      const r = el.getBoundingClientRect();
+      return r.top > 190 && r.top < vh - 130 && r.width >= larg + 10 && r.left >= 0 && r.right <= vw && el !== motor.el;
+    });
+    return candidatos.length ? candidatos[Math.floor(Math.random() * candidatos.length)] : null;
+  }
+
+  /* ---------- Grudar no cursor ---------- */
+  function grudar(texto) {
+    if (!fino || calmo || mouse.x < 0) return;
+    motor.modo = "grudado";
+    motor.el = null;
+    motor.fimGrude = performance.now() + 7000 + Math.random() * 4000;
+    motor.passou = {};
+    raiz.classList.remove("no-ar", "para-esquerda", "dormindo");
+    raiz.classList.add("grudado");
+    feliz();
+    comentar(texto || proxima("grudar", FALAS.grudar));
+    ligarMotor();
+  }
+  function soltar(texto) {
+    if (motor.modo !== "grudado") return;
+    raiz.classList.remove("grudado");
+    svgBoneco.style.rotate = "";
+    if (texto) comentar(texto);
+    cair(false);
+  }
 
   if (!calmo) {
+    /* ---------- Mouse: grude, olhar e comentários de passagem ---------- */
+    let ultimoOlhar = 0;
+    document.addEventListener("pointermove", (e) => {
+      if (e.pointerType !== "mouse") return;
+      mouse.x = e.clientX; mouse.y = e.clientY; mouse.visto = Date.now();
+      atividade();
+      if (motor.modo === "grudado") {
+        ligarMotor();
+        // comenta o que está embaixo do cursor (de vez em quando, sem medir nada)
+        const agora = Date.now();
+        if (agora - ultimoOlhar > 500 && e.target instanceof Element) {
+          ultimoOlhar = agora;
+          const t = e.target;
+          const tipo = t.closest("[data-wa], .enter, .wa") ? "wa" : t.closest("#pedido, #tec-pergunta") ? "campo" : t.closest(".calc__controle, input[type='range']") ? "calc" : "";
+          if (tipo && !motor.passou[tipo]) { motor.passou[tipo] = true; comentar(FALAS.passarPor[tipo], 2500); }
+        }
+      }
+    }, { passive: true });
+    document.addEventListener("pointerleave", () => { mouse.x = -999; if (motor.modo === "grudado") soltar(); });
+    // qualquer clique faz ele soltar o cursor
+    document.addEventListener("pointerdown", () => { if (motor.modo === "grudado") soltar(proxima("soltarClique", FALAS.soltarClique)); }, true);
+
+    // mouse parado em cima do Tec por um tempinho: ele agarra o cursor
+    let timerGrude = 0;
+    boneco.addEventListener("pointerenter", (e) => {
+      if (e.pointerType !== "mouse") return;
+      clearTimeout(timerGrude);
+      timerGrude = setTimeout(() => { if (!ocupado() && motor.modo !== "grudado") grudar(FALAS.grudarParado[0]); }, 1600);
+    });
+    boneco.addEventListener("pointerleave", () => clearTimeout(timerGrude));
+    boneco.addEventListener("click", () => clearTimeout(timerGrude));
+
+    /* ---------- Chamar o Tec: duplo clique (mouse) ou toque (celular) num espaço vazio ---------- */
+    const INTERATIVO = "a, button, input, textarea, select, label, summary, [role], .tec, .cmdk, .paleta, .mapa, .calc";
+    let ultimoChamado = 0;
+    function chamar(e) {
+      if (ocupado() || calmo) return;
+      const alvo = e.target instanceof Element ? e.target : null;
+      if (!alvo || alvo.closest(INTERATIVO)) return;
+      if (Date.now() - ultimoChamado < 2500) return;
+      ultimoChamado = Date.now();
+      const poleiro = alvo.closest(SELETOR_POLEIRO);
+      if (poleiro) {
+        const r = poleiro.getBoundingClientRect();
+        if (r.top > 190 && r.width >= larg + 10) { pularPara(poleiro, e.clientX); comentar(proxima("chamar", FALAS.chamar), 3000); return; }
+      }
+      pularPara(null, e.clientX - larg / 2);
+      comentar(proxima("chamar", FALAS.chamar), 3000);
+    }
+    document.addEventListener("dblclick", (e) => { if (fino) chamar(e); });
+    document.addEventListener("click", (e) => { if (!fino && e.pointerType !== "mouse") chamar(e); });
+
+    /* ---------- Rolagem ---------- */
     let ultimaY = window.scrollY;
     let direcao = 0;
     let modo = "";
     const ultimoModo = { 1: "", [-1]: "" };
     let fimRolagem = 0;
-    let ultimaFala = 0;
     let falouNoTopo = true;
     let falouNoFim = false;
     let quadroRol = 0;
     let voltas = 0;
+    let ultimoPulinho = 0;
+    let alturaRolavel = 0;
+    const medirRolagem = () => { alturaRolavel = document.documentElement.scrollHeight - window.innerHeight; };
+    medirRolagem();
+    window.addEventListener("resize", medirRolagem);
+    if ("ResizeObserver" in window) new ResizeObserver(medirRolagem).observe(document.body);
     // o Tec atravessa a tela: cada pixel rolado vira um pedaço de corrida
     const RITMO = fino ? 0.55 : 0.45;
-
-    function podeFalar(intervalo) { return Date.now() - ultimaFala > intervalo; }
-    function comentar(texto) { ultimaFala = Date.now(); falarRapido(texto); }
-    function limiteDireito() { return window.innerWidth - largura() - MARGEM; }
 
     function trocarModo(dir) {
       const opcoes = MODOS[dir].filter((m) => m !== ultimoModo[dir]);
@@ -515,90 +784,152 @@
       raiz.classList.remove("freando");
       // no "de ré" ele olha para a direita enquanto vai para a esquerda
       raiz.classList.toggle("para-esquerda", dir < 0 && modo !== "de-re");
-      raiz.style.setProperty("--inclina", (modo === "de-re" ? 7 : dir * (modo === "patina" ? 12 : modo === "arrasta" ? 4 : 8)) + "deg");
+      svgBoneco.style.rotate = (modo === "de-re" ? 7 : dir * (modo === "patina" ? 12 : modo === "arrasta" ? 4 : 8)) + "deg";
     }
 
     async function parar() {
+      if (!modo) return;
       raiz.classList.remove("rolando", "rol-" + modo, "para-esquerda");
+      svgBoneco.style.rotate = "";
       const modoQueParou = modo;
       modo = "";
       direcao = 0;
       raiz.classList.add("freando");
       setTimeout(() => raiz.classList.remove("freando"), 500);
+      if (motor.modo !== "chao") return;
       // se parou fora da tela ou em cima do botão do WhatsApp, volta para um lugar visível
-      const dentro = Math.max(MARGEM, Math.min(limiteDireito() - 80, x));
+      const dentro = Math.max(MARGEM, Math.min(window.innerWidth - larg - MARGEM - 80, x));
       if (Math.abs(dentro - x) > 2) await andarAte(dentro);
-      if (emTour || !chat.hidden) return;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      if (window.scrollY >= max - 4 && !falouNoFim && podeFalar(3000)) { falouNoFim = true; feliz(); comentar(proxima("fim", FALAS.fim)); }
-      else if (window.scrollY < 40 && !falouNoTopo && podeFalar(3000)) { falouNoTopo = true; acenar(); comentar(proxima("topo", FALAS.topo)); }
+      if (ocupado()) return;
+      const yPag = window.scrollY;
+      if (yPag >= alturaRolavel - 4 && !falouNoFim) { falouNoFim = true; feliz(); comentar(proxima("fim", FALAS.fim), 3000); }
+      else if (yPag < 40 && !falouNoTopo) { falouNoTopo = true; acenar(); comentar(proxima("topo", FALAS.topo), 3000); }
       else if (modoQueParou === "arrasta" || modoQueParou === "corre") { if (Math.random() < 0.5) piscar(); }
       else if (Math.random() < 0.35) acenar();
     }
 
     function aoRolar() {
       quadroRol = 0;
-      const y = window.scrollY;
-      const dy = y - ultimaY;
-      ultimaY = y;
+      const yPag = window.scrollY;
+      const dy = yPag - ultimaY;
+      ultimaY = yPag;
       if (emTour || !chat.hidden || Math.abs(dy) < 1) return;
+      ultimaRolagem = performance.now();
+      atividade();
       // rolar a página responde o convite do tour com um "agora não"
-      if (!balao.hidden && acoes.children.length > 0) { calar(); guardar("tec-visto", "1"); }
+      if (balaoComConvite()) { calar(); guardar("tec-visto", "1"); }
       window.tecRolou = true;
+      if (yPag > 200) falouNoTopo = false;
+      if (yPag < alturaRolavel - 200) falouNoFim = false;
 
-      if (y > 200) falouNoTopo = false;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      if (y < max - 200) falouNoFim = false;
+      // pendurado no cursor: a rolagem derruba
+      if (motor.modo === "grudado") { soltar(proxima("soltarRolagem", FALAS.soltarRolagem)); return; }
+      // em cima de um elemento: vai de carona (o motor acompanha o elemento)
+      if (motor.modo === "empoleirado") {
+        if (!motor.anunciouCarona) { motor.anunciouCarona = true; if (Math.random() < 0.6) comentar(proxima("carona", FALAS.carona), 4000); }
+        ligarMotor();
+        return;
+      }
+      if (motor.modo !== "chao") return;
 
       const dir = dy > 0 ? 1 : -1;
       if (dir !== direcao) {
         direcao = dir;
         trocarModo(dir);
-        if (podeFalar(7000) && Math.random() < 0.6) {
+        if (Math.random() < 0.6) {
           let texto;
           if (Math.random() < 0.4) texto = FALAS.modo[modo];
           else if (dir > 0) texto = Math.abs(dy) > 90 ? proxima("rapida", FALAS.rapida) : proxima("descida", FALAS.descida);
           else texto = fino && Math.random() < 0.3 ? FALAS.teclado[0] : proxima("subida", FALAS.subida);
-          comentar(texto);
+          comentar(texto, 7000);
         }
-      } else if (dir > 0 && Math.abs(dy) > 160 && podeFalar(7000)) {
-        comentar(proxima("rapida", FALAS.rapida));
+      } else if (dir > 0 && Math.abs(dy) > 160) {
+        comentar(proxima("rapida", FALAS.rapida), 7000);
       }
 
       // corre na direção da rolagem; ao sair por um lado, entra pelo outro
-      const passo = Math.max(-70, Math.min(70, dy * RITMO));
-      let novoX = x + passo;
-      const w = largura();
+      let novoX = x + Math.max(-70, Math.min(70, dy * RITMO));
       if (novoX > window.innerWidth + 8) {
-        novoX = -w - 8; voltas++;
-        raiz.style.setProperty("--dur", "0s"); aplicarX(novoX); x = novoX;
-        if (voltas % 3 === 0 && podeFalar(5000)) comentar("Mais uma volta na tela. Isso conta como exercício?");
-        return;
-      }
-      if (novoX < -w - 8) {
+        novoX = -larg - 8; voltas++;
+        if (voltas % 3 === 0) comentar("Mais uma volta na tela. Isso conta como exercício?", 5000);
+      } else if (novoX < -larg - 8) {
         novoX = window.innerWidth + 8; voltas++;
-        raiz.style.setProperty("--dur", "0s"); aplicarX(novoX); x = novoX;
-        return;
       }
-      x = novoX;
-      raiz.style.setProperty("--dur", ".14s");
-      aplicarX(x);
+      colocar(novoX, 0);
       if (!balao.hidden) encaixarBalao();
+
+      // de vez em quando, um pulinho no meio da corrida
+      const agora = Date.now();
+      if ((modo === "corre" || modo === "patina") && agora - ultimoPulinho > 2600 && Math.random() < 0.04) {
+        ultimoPulinho = agora;
+        pularPara(null, novoX + dir * 110);
+      }
 
       clearTimeout(fimRolagem);
       fimRolagem = setTimeout(parar, 260);
     }
     window.addEventListener("scroll", () => { if (!quadroRol) quadroRol = requestAnimationFrame(aoRolar); }, { passive: true });
+
+    /* ---------- Sozinho: pula, gruda, passeia, dorme ---------- */
+    let ultimaAtividade = Date.now();
+    let dormindo = false;
+    const zzz = document.createElement("span");
+    zzz.className = "tec__zzz";
+    zzz.setAttribute("aria-hidden", "true");
+    zzz.innerHTML = "<i>z</i><i>z</i><i>z</i>";
+    raiz.appendChild(zzz);
+    function atividade() {
+      ultimaAtividade = Date.now();
+      if (dormindo) {
+        dormindo = false;
+        raiz.classList.remove("dormindo");
+        setTimeout(() => { if (!ocupado()) { pularPara(null, x); comentar(proxima("acordar", FALAS.acordar), 2000); } }, 250);
+      }
+    }
+    window.addEventListener("keydown", atividade);
+    window.addEventListener("touchstart", atividade, { passive: true });
+
+    function agendar() { setTimeout(acaoSozinho, 3500 + Math.random() * 4500); }
+    function acaoSozinho() {
+      agendar();
+      if (document.hidden || ocupado() || modo || dormindo) return;
+      if (!raiz.classList.contains("pronto") || x < -40 || x > window.innerWidth) return;
+      if (motor.modo === "pulando" || motor.modo === "caindo" || motor.modo === "grudado") return;
+      if (performance.now() - ultimaRolagem < 1200) return;
+      const parado = Date.now() - ultimaAtividade;
+      if (parado > 45000) {
+        dormindo = true;
+        if (motor.modo === "empoleirado") { /* dorme lá em cima mesmo */ }
+        raiz.classList.add("dormindo");
+        return;
+      }
+      const sorte = Math.random();
+      const mouseRecente = fino && mouse.x > 0 && Date.now() - mouse.visto < 5000;
+      if (mouseRecente && sorte < 0.22) { grudar(); return; }
+      if (sorte < 0.72) {
+        const el = escolherPoleiro();
+        if (el) { pularPara(el); return; }
+      }
+      if (motor.modo === "empoleirado") { pularPara(null, x + (Math.random() - 0.5) * 260); return; }
+      // passeio no chão: um pulinho de lado, ou anda até embaixo do cursor e olha
+      if (mouseRecente && Math.random() < 0.5) { andarAte(mouse.x - larg / 2).then(() => { if (!ocupado()) acenar(); }); return; }
+      pularPara(null, x + (Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 160));
+    }
+    // começa a agir depois da entrada (e da abertura, se houver)
+    setTimeout(agendar, 6000);
   }
 
   // usado pelos atalhos de teclado e pelo easter egg (interacoes.js)
   window.tec = {
     tour: iniciarTour,
     comemorar(texto) { feliz(); acenar(); falarRapido(texto); },
+    pular() { const el = escolherPoleiro(); if (el) pularPara(el); },
+    grudar() { grudar(); },
   };
 
   window.addEventListener("resize", () => {
-    const max = window.innerWidth - largura() - MARGEM;
-    if (x > max) { x = Math.max(MARGEM, max); raiz.style.setProperty("--dur", "0s"); aplicarX(x); }
+    const max = window.innerWidth - larg - MARGEM;
+    if (motor.modo === "empoleirado" || motor.modo === "grudado") { cair(false); return; }
+    if (x > max) colocar(Math.max(MARGEM, max), 0);
   });
 })();

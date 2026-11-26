@@ -63,19 +63,29 @@ document.addEventListener("click", (e) => {
   if (!menu.contains(e.target) && !burger.contains(e.target)) fecharMenu(false);
 });
 
-/* ---------- Holofote do hero e dos cartões ---------- */
-const grade = $(".hero__grade");
+/* ---------- Holofote do hero e dos cartões ----------
+   (v3) O holofote é um quadrado de 364 px movido por transform; o fundo dele
+   é deslocado para os pontos coincidirem com a grade de 26 px do topo. */
 const hero = $(".hero");
+const luz = $(".hero__luz");
 let quadroHolofote = 0;
-hero.addEventListener("pointermove", (e) => {
-  if (quadroHolofote) return;
-  quadroHolofote = requestAnimationFrame(() => {
-    quadroHolofote = 0;
-    const r = grade.getBoundingClientRect();
-    grade.style.setProperty("--mx", e.clientX - r.left + "px");
-    grade.style.setProperty("--my", e.clientY - r.top + "px");
+let ultimoPonteiro = null;
+if (luz && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+  hero.addEventListener("pointermove", (e) => {
+    ultimoPonteiro = e;
+    if (quadroHolofote) return;
+    quadroHolofote = requestAnimationFrame(() => {
+      quadroHolofote = 0;
+      const r = hero.getBoundingClientRect();
+      const px = Math.round(ultimoPonteiro.clientX - r.left - 182);
+      const py = Math.round(ultimoPonteiro.clientY - r.top - 182);
+      luz.style.transform = "translate3d(" + px + "px," + py + "px,0)";
+      luz.style.backgroundPosition = (((-px % 26) + 26) % 26) + "px " + (((-py % 26) + 26) % 26) + "px";
+      luz.classList.add("on");
+    });
   });
-});
+  hero.addEventListener("pointerleave", () => luz.classList.remove("on"));
+}
 let heroVisivel = true;
 
 /* Caminho pontilhado do hero preso à grade de 26px do fundo */
@@ -266,15 +276,25 @@ const manifesto = $("#manifesto");
 })(manifesto);
 const palavras = $$(".p", manifesto);
 let quadroManifesto = 0;
+let manifestoTopo = 0, manifestoAltura = 1;
+function medirManifesto() { const r = manifesto.getBoundingClientRect(); manifestoTopo = r.top + window.scrollY; manifestoAltura = r.height; }
+medirManifesto();
+window.addEventListener("resize", medirManifesto);
+if ("ResizeObserver" in window) new ResizeObserver(medirManifesto).observe(document.body);
+let ultimoAcesas = -1;
 function pedirAcender() {
   if (quadroManifesto) return;
+  const topo = manifestoTopo - window.scrollY;
+  if (topo > window.innerHeight * 1.2 || topo + manifestoAltura < -window.innerHeight * 0.5) return;
   quadroManifesto = requestAnimationFrame(() => { quadroManifesto = 0; acenderPalavras(); });
 }
 function acenderPalavras() {
-  const r = manifesto.getBoundingClientRect();
   const vh = window.innerHeight;
-  const prog = Math.min(1, Math.max(0, (vh * 0.85 - r.top) / (r.height + vh * 0.35)));
+  const topo = manifestoTopo - window.scrollY;
+  const prog = Math.min(1, Math.max(0, (vh * 0.85 - topo) / (manifestoAltura + vh * 0.35)));
   const n = Math.round(prog * palavras.length);
+  if (n === ultimoAcesas) return;
+  ultimoAcesas = n;
   palavras.forEach((p, i) => p.classList.toggle("acesa", i < n));
 }
 acenderPalavras();
@@ -522,9 +542,16 @@ const ponteiroFino = window.matchMedia("(hover: hover) and (pointer: fine)").mat
 /* ---------- Barra de progresso da leitura ---------- */
 const barra = $(".progresso span");
 let quadroBarra = 0;
+const trilhoLargo = window.matchMedia("(min-width: 1380px) and (hover: hover)");
+let alturaRolavel = 0;
+function medirAltura() { alturaRolavel = document.documentElement.scrollHeight - window.innerHeight; }
+medirAltura();
+window.addEventListener("resize", medirAltura);
+if ("ResizeObserver" in window) new ResizeObserver(medirAltura).observe(document.body);
 function atualizarBarra() {
   quadroBarra = 0;
-  const max = document.documentElement.scrollHeight - window.innerHeight;
+  if (trilhoLargo.matches) return; // nas telas largas quem mostra o progresso é o trilho
+  const max = alturaRolavel;
   barra.style.setProperty("--p", max > 0 ? (window.scrollY / max).toFixed(4) : 0);
 }
 window.addEventListener("scroll", () => { if (!quadroBarra) quadroBarra = requestAnimationFrame(atualizarBarra); }, { passive: true });

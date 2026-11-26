@@ -9,6 +9,15 @@
    o laranja aparece apenas em formas.
    ========================================================== */
 
+
+/* (v3) Variáveis que o JS muda a cada movimento do mouse/rolagem: registradas
+   como não herdadas, para o navegador recalcular só o próprio elemento */
+@property --x { syntax: "<length-percentage>"; inherits: false; initial-value: 50%; }
+@property --y { syntax: "<length-percentage>"; inherits: false; initial-value: 50%; }
+@property --rx { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@property --ry { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@property --p { syntax: "<number>"; inherits: false; initial-value: 0; }
+
 :root {
   --fundo: #0A1220;      /* Tinta mais profunda, base da página */
   --tinta: #0F1B2D;      /* superfícies */
@@ -86,11 +95,10 @@ kbd {
 .nav__pill {
   pointer-events: auto; max-width: 1120px; margin: 0 auto; height: 60px; padding: 0 10px 0 16px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  background: rgba(15, 27, 45, .55); border: 1px solid var(--linha); border-radius: 18px;
-  backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px);
+  background: rgba(13, 23, 39, .9); border: 1px solid var(--linha); border-radius: 18px;
   transition: background .3s, border-color .3s, box-shadow .3s;
 }
-.nav.rolou .nav__pill { background: rgba(10, 18, 32, .82); border-color: var(--linha-2); box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+.nav.rolou .nav__pill { background: rgba(10, 18, 32, .95); border-color: var(--linha-2); box-shadow: 0 12px 40px rgba(0,0,0,.35); }
 .nav__links { display: flex; gap: 4px; }
 .nav__links a { padding: 8px 12px; border-radius: 9px; font-size: 14.5px; font-weight: 500; color: var(--texto-2); text-decoration: none; transition: color .2s, background .2s; }
 .nav__links a:hover { color: var(--texto); background: rgba(255,255,255,.05); }
@@ -103,8 +111,7 @@ kbd {
 @media (max-width: 1020px) {
   .nav__links {
     position: absolute; left: 12px; right: 12px; top: 80px; flex-direction: column; gap: 0;
-    background: rgba(10, 18, 32, .96); border: 1px solid var(--linha-2); border-radius: 18px; padding: 8px;
-    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    background: rgba(10, 18, 32, .98); border: 1px solid var(--linha-2); border-radius: 18px; padding: 8px;
     opacity: 0; visibility: hidden; transform: translateY(-6px); transition: opacity .2s, transform .2s, visibility .2s;
   }
   .nav__links.aberto { opacity: 1; visibility: visible; transform: none; }
@@ -125,25 +132,27 @@ kbd {
   mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 78%);
   -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 30%, transparent 78%);
 }
-.hero__grade::after { /* holofote que segue o cursor */
-  content: ""; position: absolute; inset: 0;
+.hero__luz { /* holofote que segue o cursor: só 360 px, movido por transform */
+  position: absolute; left: 0; top: 0; width: 364px; height: 364px; opacity: 0; transition: opacity .3s; will-change: transform;
   background-image: radial-gradient(rgba(255, 106, 43, .9) 1.1px, transparent 1.3px); background-size: 26px 26px;
-  mask-image: radial-gradient(180px circle at var(--mx, -400px) var(--my, -400px), #000, transparent 70%);
-  -webkit-mask-image: radial-gradient(180px circle at var(--mx, -400px) var(--my, -400px), #000, transparent 70%);
+  mask-image: radial-gradient(closest-side, #000, transparent); -webkit-mask-image: radial-gradient(closest-side, #000, transparent);
 }
+.hero__luz.on { opacity: 1; }
 .hero__feixe { /* a seta do símbolo, em luz */
   position: absolute; left: 50%; top: 58%; width: 150%; height: 180px; translate: -50% -50%; rotate: -38deg;
   background: linear-gradient(90deg, transparent 8%, rgba(255, 106, 43, .05) 25%, rgba(255, 106, 43, .55) 52%, rgba(255, 150, 90, .85) 60%, rgba(255, 106, 43, .25) 70%, transparent 86%);
-  filter: blur(48px); opacity: 1; animation: respira 9s ease-in-out infinite;
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%, #000 55%, transparent); mask-image: linear-gradient(180deg, transparent, #000 45%, #000 55%, transparent);
+  opacity: .75; animation: respira 9s ease-in-out infinite; will-change: opacity, transform;
 }
-@keyframes respira { 50% { opacity: .7; scale: 1.04 1.15; } }
+@keyframes respira { 50% { opacity: .5; } }
 .hero__in { display: flex; flex-direction: column; align-items: flex-start; }
 .selo {
   display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 10px; border-radius: 999px;
   border: 1px solid var(--linha-2); background: rgba(15, 27, 45, .6); font-size: 13.5px; color: var(--texto-2);
 }
-.selo__ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--laranja); box-shadow: 0 0 0 4px rgba(255, 106, 43, .18); animation: pulsa 2.4s ease-in-out infinite; }
-@keyframes pulsa { 50% { box-shadow: 0 0 0 8px rgba(255, 106, 43, 0); } }
+.selo__ponto { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--laranja); box-shadow: 0 0 0 4px rgba(255, 106, 43, .18); }
+.selo__ponto::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; background: rgba(255, 106, 43, .35); animation: pulsa 2.4s ease-out infinite; }
+@keyframes pulsa { from { transform: scale(.6); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
 
 /* Sem JS, o título aparece normal; com o palco desenhado, ele fica só para leitores de tela */
 .hero__h1 { margin-top: 26px; max-width: 980px; font-size: clamp(42px, 7.2vw, 96px); letter-spacing: -0.055em; line-height: .94; }
@@ -158,7 +167,7 @@ kbd {
 .p-est circle { fill: var(--fundo); stroke: var(--nevoa); stroke-width: 3px; }
 .p-est text { font-family: var(--f-mono); fill: var(--texto-2); }
 .p-atalho { stroke: var(--laranja); stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 0; }
-.p-brilho { stroke: var(--laranja); stroke-linecap: round; opacity: .3; filter: blur(16px); }
+.p-brilho { display: none; } /* (v3) o halo com desfoque pesava; o brilho do fundo já faz esse papel */
 .p-ponta { fill: none; stroke: var(--laranja); stroke-linecap: round; stroke-linejoin: round; }
 .p-inicio { fill: var(--laranja); }
 .p-grande { font-family: var(--f-display); font-weight: 700; letter-spacing: -0.045em; fill: var(--texto); }
@@ -179,7 +188,7 @@ kbd {
 .palco.fim .p-longo-g { opacity: .55; }
 @keyframes p-desenha { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes p-surge { from { opacity: 0; } to { opacity: 1; } }
-@keyframes p-brilha { 0% { opacity: 0; } 35% { opacity: .75; } 100% { opacity: .3; } }
+@keyframes p-brilha { 0% { opacity: 0; } 35% { opacity: .4; } 100% { opacity: .14; } }
 @keyframes p-apaga { from { opacity: 1; } to { opacity: .55; } }
 
 .hero__base { display: flex; flex-direction: column; align-items: flex-start; width: 100%; }
@@ -193,8 +202,7 @@ kbd {
 /* Paleta de comando */
 .paleta {
   position: relative; width: 100%; max-width: 680px; margin-top: 28px; text-align: left;
-  background: rgba(15, 27, 45, .78); border: 1px solid var(--linha-2); border-radius: 20px;
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  background: rgba(15, 27, 45, .94); border: 1px solid var(--linha-2); border-radius: 20px;
   box-shadow: 0 30px 80px rgba(0, 0, 0, .5), 0 0 0 1px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.06);
 }
 .paleta::before { /* borda acesa no topo */
@@ -248,7 +256,7 @@ kbd {
   .hero { padding-top: calc(118px + env(safe-area-inset-top, 0px)); padding-bottom: 72px; }
   .paleta input { font-size: 16px; }
   .selo { font-size: 12.5px; }
-  .hero__feixe { animation: none; filter: blur(36px); }
+  .hero__feixe { animation: none; }
   .btn { white-space: nowrap; }
   .hero__h1 { font-size: clamp(38px, 11vw, 48px); }
   .item { grid-template-columns: 30px 1fr; }
@@ -694,20 +702,22 @@ input[type="range"]:focus-visible { outline: 2px solid var(--laranja); outline-o
 /* ---------- Tec: mascote e assistente ---------- */
 .tec {
   position: fixed; left: 0; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 55;
-  transform: translateX(var(--x, 16px)); transition: transform var(--dur, 1s) linear;
+  transform: translate3d(16px, 0, 0); will-change: transform; /* posição e transição vêm do mascote.js */
   visibility: hidden;
 }
 .tec.pronto { visibility: visible; }
 .tec [hidden], .cmdk[hidden] { display: none !important; }
-.tec__boneco { display: block; width: 72px; height: 90px; padding: 0; border: 0; background: none; cursor: pointer; filter: drop-shadow(0 10px 18px rgba(0,0,0,.45)); -webkit-tap-highlight-color: transparent; }
+.tec__boneco { display: block; width: 72px; height: 90px; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+/* (v3) sem filtro de sombra: ele obrigava a redesenhar o Tec a cada quadro */
 .tec__boneco:focus-visible { outline: 2px solid var(--laranja); outline-offset: 4px; border-radius: 18px; }
 .tec__svg { width: 100%; height: 100%; overflow: visible; }
 .tec__svg * { transform-box: fill-box; }
 
 /* respiração parada */
-.tec__corpo { transform-origin: 50% 100%; animation: tec-flutua 3.2s ease-in-out infinite; }
+.tec__corpo { transform-origin: 50% 100%; }
 @keyframes tec-flutua { 50% { transform: translateY(-3px); } }
-.tec__luz { transform-origin: center; animation: tec-luz 2.4s ease-in-out infinite; }
+.tec__luz { transform-origin: center; }
+.tec.pensando .tec__luz { animation: tec-luz 2.4s ease-in-out infinite; }
 @keyframes tec-luz { 50% { transform: scale(1.35); opacity: .5; } }
 .tec.pensando .tec__luz { animation-duration: .6s; }
 
@@ -936,7 +946,7 @@ input[type="range"]:focus-visible { outline: 2px solid var(--laranja); outline-o
   .trilho ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 26px; position: relative; }
   .trilho__linha { position: absolute; left: 13px; top: 14px; bottom: 14px; width: 2px;
     background-image: radial-gradient(circle, rgba(138, 151, 171, .6) 1px, transparent 1.4px); background-size: 2px 8px; }
-  .trilho__linha i { position: absolute; inset: 0; background: var(--laranja); border-radius: 2px; transform-origin: top; scale: 1 0; box-shadow: 0 0 10px rgba(255, 106, 43, .6); }
+  .trilho__linha i { position: absolute; inset: 0; background: var(--laranja); border-radius: 2px; transform-origin: top; transform: scaleY(0); will-change: transform; box-shadow: 0 0 10px rgba(255, 106, 43, .6); }
   .trilho__k { position: relative; display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--texto-2); }
   .trilho__k kbd { width: 28px; height: 28px; font-size: 12px; background: var(--fundo); color: var(--nevoa); transition: background .2s, color .2s, border-color .2s, scale .2s; }
   .trilho__k span {
@@ -1021,7 +1031,6 @@ html.com-intro .intro.ja { animation: intro-sai .45s 0s cubic-bezier(.7, 0, .2, 
    Descida: corre, patina, pula. Subida: de-re, escala, arrasta.
    --inclina vem do mascote.js (sinal conforme a direção). */
 .tec__svg { transform-origin: 50% 92%; transition: rotate .25s ease-out; }
-.tec.rolando .tec__svg { rotate: var(--inclina, 0deg); }
 .tec.rolando .tec__corpo { animation: none; }
 
 /* descida 1: correndo */
@@ -1078,3 +1087,30 @@ html.com-intro .intro.ja { animation: intro-sai .45s 0s cubic-bezier(.7, 0, .2, 
 /* Abertura: espera a tela estar pronta (intro.js põe .comeca), senão
    a pessoa perderia o começo enquanto as fontes carregam */
 html.com-intro .intro:not(.comeca), html.com-intro .intro:not(.comeca) * { animation-play-state: paused !important; }
+
+/* ---------- Tec livre (v3): no ar, quicando, pendurado no cursor, dormindo ---------- */
+.tec.no-ar .tec__perna--e { transform: rotate(-14deg) scaleY(.82); }
+.tec.no-ar .tec__perna--d { transform: rotate(14deg) scaleY(.82); }
+.tec.no-ar .tec__braco { transform: rotate(-135deg); }
+.tec.no-ar .tec__sombra { opacity: 0; }
+.tec.quique .tec__svg { animation: tec-quique .34s ease-out; }
+@keyframes tec-quique { 30% { scale: 1.14 .8; } 65% { scale: .94 1.07; } }
+
+.tec.grudado { pointer-events: none; }
+.tec.grudado .tec__braco { transform: rotate(-168deg); animation: none; }
+.tec.grudado .tec__perna--e { animation: tec-balanca-perna .5s ease-in-out infinite alternate; }
+.tec.grudado .tec__perna--d { animation: tec-balanca-perna .5s ease-in-out infinite alternate-reverse; }
+.tec.grudado .tec__olhos { transform: translateY(-4px) !important; }
+.tec.grudado .tec__sombra { opacity: 0; }
+.tec.grudado .tec__svg { transition: rotate .08s linear; }
+@keyframes tec-balanca-perna { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+
+.tec__zzz { position: absolute; left: 56px; bottom: 74px; display: none; pointer-events: none; font: 700 14px/1 var(--f-mono); color: var(--nevoa); }
+.tec__zzz i { position: absolute; font-style: normal; opacity: 0; animation: tec-z 2.4s ease-out infinite; }
+.tec__zzz i:nth-child(2) { animation-delay: .8s; font-size: 17px; }
+.tec__zzz i:nth-child(3) { animation-delay: 1.6s; font-size: 20px; }
+@keyframes tec-z { 0% { opacity: 0; transform: translate(0, 0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(18px, -34px); } }
+.tec.dormindo .tec__zzz { display: block; }
+.tec.dormindo .tec__olho { transform: scaleY(.1); }
+.tec.dormindo .tec__corpo { transform: translateY(3px) rotate(4deg); }
+@media (prefers-reduced-motion: reduce) { .tec__zzz i { animation: none; opacity: 1; } }
