@@ -18,6 +18,7 @@
 
   const tela = document.createElement("canvas");
   tela.className = "cursor-rede";
+  tela.style.visibility = "hidden";
   tela.setAttribute("aria-hidden", "true");
   const anel = document.createElement("div");
   anel.className = "cursor-anel";
@@ -32,7 +33,7 @@
   const ctx = tela.getContext("2d");
   let dpr = 1;
   function dimensionar() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = 1; // (v3) o rastro é suave: 1 px por pixel CSS basta e pesa até 4x menos
     tela.width = innerWidth * dpr;
     tela.height = innerHeight * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -111,6 +112,7 @@
   function iniciar() {
     if (rodando) return;
     rodando = true;
+    tela.style.visibility = "visible";
     requestAnimationFrame(quadro);
   }
 
@@ -174,6 +176,8 @@
     const parado = Math.abs(mouse.x - anelPos.x) < 0.1 && Math.abs(mouse.y - anelPos.y) < 0.1;
     if (parado && !nos.length && !faiscas.length) {
       rodando = false;
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+      tela.style.visibility = "hidden"; // camada vazia não entra na composição da rolagem
       return;
     }
     requestAnimationFrame(quadro);

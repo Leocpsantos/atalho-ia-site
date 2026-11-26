@@ -77,10 +77,10 @@ if (luz && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
     quadroHolofote = requestAnimationFrame(() => {
       quadroHolofote = 0;
       const r = hero.getBoundingClientRect();
-      const px = Math.round(ultimoPonteiro.clientX - r.left - 182);
-      const py = Math.round(ultimoPonteiro.clientY - r.top - 182);
+      // encaixa na grade de 26 px: assim os pontos coincidem sem mexer no fundo (só transform)
+      const px = Math.round((ultimoPonteiro.clientX - r.left - 182) / 26) * 26;
+      const py = Math.round((ultimoPonteiro.clientY - r.top - 182) / 26) * 26;
       luz.style.transform = "translate3d(" + px + "px," + py + "px,0)";
-      luz.style.backgroundPosition = (((-px % 26) + 26) % 26) + "px " + (((-py % 26) + 26) % 26) + "px";
       luz.classList.add("on");
     });
   });
@@ -183,11 +183,14 @@ function desenharItens(itens, acoes) {
   });
 }
 
+// (v3) enquanto a página rola, a demonstração espera (menos trabalho na hora da rolagem)
+let rolandoAte = 0;
+window.addEventListener("scroll", () => { rolandoAte = performance.now() + 250; }, { passive: true });
 async function rodarDemo() {
   paleta.classList.add("demo");
   let i = 0;
   while (modoDemo) {
-    while (modoDemo && (!heroVisivel || document.hidden)) await espera(500);
+    while (modoDemo && (!heroVisivel || document.hidden || performance.now() < rolandoAte)) await espera(200);
     if (!modoDemo) return;
     const c = CENARIOS[i % CENARIOS.length];
     campo.value = "";
@@ -197,6 +200,7 @@ async function rodarDemo() {
       if (!modoDemo) return;
       campo.value += letra;
       await espera(34 + Math.random() * 40);
+      while (modoDemo && performance.now() < rolandoAte) await espera(120); // não digita durante a rolagem
     }
     if (!modoDemo) return;
     await espera(260);
@@ -302,8 +306,10 @@ window.addEventListener("scroll", pedirAcender, { passive: true });
 window.addEventListener("resize", pedirAcender);
 
 /* ---------- Revelar ao rolar ---------- */
-const revelaveis = $$(".cab, .calc__painel, .calc__resultado, .cartao, .servicos li, .acorde__item, .setores li, .projeto__txt, .projeto__tela, details, .final__in > *");
-if ("IntersectionObserver" in window && !semMovimento) {
+const revelaveis = $$(".cab, .calc__painel, .servicos li, .acorde__item, .setores li, .projeto__txt, details, .final__in > *");
+// (v3) desligado: a transição de cada bloco entrando na tela pesava na rolagem; o conteúdo já aparece pronto
+const REVELAR_AO_ROLAR = false;
+if (REVELAR_AO_ROLAR && "IntersectionObserver" in window && !semMovimento) {
   const io = new IntersectionObserver((itens) => {
     itens.forEach((it) => {
       if (!it.isIntersecting) return;
@@ -529,6 +535,9 @@ if ("IntersectionObserver" in window) {
   const vis = { hero: true, contato: false };
   const atualizarWa = () => wa.classList.toggle("oculto", vis.hero || vis.contato);
   new IntersectionObserver(([e]) => { vis.hero = e.isIntersecting; heroVisivel = e.isIntersecting; atualizarWa(); }, { threshold: 0.25 }).observe(hero);
+  // (v3) sem tela, sem animação: o selo e a faixa de ferramentas param quando saem de vista
+  const ioFora = new IntersectionObserver((itens) => itens.forEach((it) => it.target.classList.toggle("fora", !it.isIntersecting)));
+  [hero, $(".ferramentas")].forEach((el) => el && ioFora.observe(el));
   new IntersectionObserver(([e]) => { vis.contato = e.isIntersecting; contatoVisivel = e.isIntersecting; atualizarWa(); }, { threshold: 0.3 }).observe(contato);
 }
 

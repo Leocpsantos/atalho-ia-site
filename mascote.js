@@ -193,14 +193,14 @@
     encaixarBalao();
   }
   // mantém o balão sempre dentro da tela, mesmo se o Tec ainda estiver chegando
+  // (v3) sem getBoundingClientRect: a posição do balão sai das contas (largura fixa do CSS)
   function encaixarBalao() {
-    balao.style.translate = "";
     if (balao.hidden) return;
-    const b = balao.getBoundingClientRect();
-    let dx = 0;
-    if (b.left < 12) dx = 12 - b.left;
-    else if (b.right > window.innerWidth - 12) dx = window.innerWidth - 12 - b.right;
-    if (dx) balao.style.translate = dx.toFixed(0) + "px 0";
+    const bw = Math.min(310, window.innerWidth - 32);
+    const esquerda = x + (raiz.classList.contains("balao-esquerda") ? larg - bw : 0);
+    const dx = esquerda < 12 ? 12 - esquerda : Math.min(0, window.innerWidth - 12 - (esquerda + bw));
+    const novo = dx ? dx.toFixed(0) + "px 0" : "";
+    if (balao.style.translate !== novo) balao.style.translate = novo;
   }
   window.addEventListener("resize", encaixarBalao);
   raiz.addEventListener("transitionend", (e) => { if (e.target === raiz) encaixarBalao(); });
@@ -636,7 +636,6 @@
     [".calc__resultado", ["Esses números assustam, né?", "Quanto tempo, hein? Daqui de cima dá pra ver."]],
     [".mapa__quadro", ["Daqui dá pra ver o atalho inteiro."]],
     [".tecla", ["Pisando na tecla certa.", "Tecla testada e aprovada."]],
-    [".paleta", ["Escreve aí embaixo, o Tec espera."]],
     [".janela", ["Esse site aqui ficou bonito, hein?"]],
     [".cartao", ["Vista privilegiada daqui de cima.", "Esse cartão aguenta o peso do Tec? Aguenta."]],
     [".setores__link", ["Achou o seu setor? O Tec espera."]],
@@ -886,6 +885,8 @@
     let quadroRol = 0;
     let voltas = 0;
     let ultimoPulinho = 0;
+    let alvoX = x;
+    let timerPasso = 0;
     let alturaRolavel = 0;
     const medirRolagem = () => { alturaRolavel = document.documentElement.scrollHeight - window.innerHeight; };
     medirRolagem();
@@ -947,16 +948,13 @@
       // pendurado no cursor: a rolagem derruba
       if (motor.modo === "grudado") { soltar(proxima("soltarRolagem", FALAS.soltarRolagem)); return; }
       // em cima de um elemento: vai de carona (o motor acompanha o elemento)
-      if (motor.modo === "empoleirado") {
-        if (!motor.anunciouCarona) { motor.anunciouCarona = true; if (Math.random() < 0.6) comentar(proxima("carona", FALAS.carona), 4000); }
-        ligarMotor();
-        return;
-      }
+      if (motor.modo === "empoleirado") { clearInterval(motor.vigia); cair(true); return; }
       if (motor.modo !== "chao") return;
 
       const dir = dy > 0 ? 1 : -1;
       if (dir !== direcao) {
         direcao = dir;
+        alvoX = x; // começa a corrida de onde ele está
         trocarModo(dir);
         if (Math.random() < 0.6) {
           let texto;
@@ -969,22 +967,33 @@
         comentar(proxima("rapida", FALAS.rapida), 7000);
       }
 
-      // corre na direção da rolagem; ao sair por um lado, entra pelo outro
-      let novoX = x + Math.max(-70, Math.min(70, dy * RITMO));
+      // corre na direção da rolagem; ao sair por um lado, entra pelo outro.
+      // (v3) a posição muda em passos de 120 ms com transição: o compositor faz o resto, sem trabalho a cada quadro
+      let novoX = alvoX + Math.max(-90, Math.min(90, dy * RITMO));
+      let volta = false;
       if (novoX > window.innerWidth + 8) {
-        novoX = -larg - 8; voltas++;
+        novoX = -larg - 8; voltas++; volta = true;
         if (voltas % 3 === 0) comentar("Mais uma volta na tela. Isso conta como exercício?", 5000);
       } else if (novoX < -larg - 8) {
-        novoX = window.innerWidth + 8; voltas++;
+        novoX = window.innerWidth + 8; voltas++; volta = true;
       }
-      colocar(novoX, 0);
-      if (!balao.hidden) encaixarBalao();
+      alvoX = novoX;
+      if (volta) { clearTimeout(timerPasso); timerPasso = 0; colocar(alvoX, 0, 0); }
+      else if (!timerPasso) {
+        timerPasso = setTimeout(() => {
+          timerPasso = 0;
+          if (motor.modo !== "chao") return;
+          colocar(alvoX, 0, 0.13);
+          encaixarBalao();
+        }, 120);
+      }
 
       // de vez em quando, um pulinho no meio da corrida
       const agora = Date.now();
       if ((modo === "corre" || modo === "patina") && agora - ultimoPulinho > 2600 && Math.random() < 0.04) {
         ultimoPulinho = agora;
-        pularPara(null, novoX + dir * 110);
+        alvoX = novoX + dir * 110;
+        pularPara(null, alvoX);
       }
 
       clearTimeout(fimRolagem);
