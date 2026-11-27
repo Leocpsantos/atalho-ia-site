@@ -138,12 +138,6 @@ kbd {
   mask-image: radial-gradient(closest-side, #000, transparent); -webkit-mask-image: radial-gradient(closest-side, #000, transparent);
 }
 .hero__luz.on { opacity: 1; }
-.hero__feixe { /* a seta do símbolo, em luz */
-  position: absolute; left: 50%; top: 58%; width: 150%; height: 180px; translate: -50% -50%; rotate: -38deg;
-  /* (v3) elipse com degradê suave: o efeito do antigo blur, sem filtro nem máscara */
-  background: radial-gradient(ellipse 50% 50% at 58% 50%, rgba(255, 140, 80, .55), rgba(255, 106, 43, .22) 40%, rgba(255, 106, 43, .06) 62%, transparent 72%);
-  opacity: .9;
-}
 @keyframes respira { 50% { opacity: .5; } }
 .hero__in { display: flex; flex-direction: column; align-items: flex-start; }
 .selo {
@@ -257,7 +251,6 @@ kbd {
   .hero { padding-top: calc(118px + env(safe-area-inset-top, 0px)); padding-bottom: 72px; }
   .paleta input { font-size: 16px; }
   .selo { font-size: 12.5px; }
-  .hero__feixe { animation: none; }
   .btn { white-space: nowrap; }
   .hero__h1 { font-size: clamp(38px, 11vw, 48px); }
   .item { grid-template-columns: 30px 1fr; }
