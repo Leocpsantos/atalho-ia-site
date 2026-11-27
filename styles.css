@@ -591,10 +591,12 @@ details p { padding: 0 52px 26px 0; color: var(--texto-2); }
 [data-ima] { transition: translate .35s cubic-bezier(.2,.8,.2,1), transform .15s, background .2s, box-shadow .2s; }
 
 /* ---------- Ferramentas (faixa em movimento) ---------- */
-.ferramentas { position: relative; padding: 34px 0 40px; border-top: 1px solid var(--linha); overflow: hidden; overflow: clip; }
-.ferramentas::before, .ferramentas::after { content: ""; position: absolute; top: 0; bottom: 0; width: 12%; z-index: 1; pointer-events: none; }
-.ferramentas::before { left: 0; background: linear-gradient(90deg, var(--fundo), transparent); }
-.ferramentas::after { right: 0; background: linear-gradient(-90deg, var(--fundo), transparent); }
+/* laterais esmaecidas por máscara no contêiner (que não anima); o trilho é que se move por transform */
+.ferramentas {
+  position: relative; padding: 34px 0 40px; border-top: 1px solid var(--linha); overflow: hidden; overflow: clip;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
 .ferramentas__titulo { text-align: center; font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--nevoa); margin-bottom: 22px; padding-inline: 20px; }
 .ferramentas__trilho {
   display: flex; width: max-content; animation: desliza 42s linear infinite; will-change: transform;
@@ -1121,3 +1123,6 @@ html.com-intro .intro:not(.comeca), html.com-intro .intro:not(.comeca) * { anima
 .tec.voo-rapel .tec__perna--e { animation: tec-passo .25s ease-in-out infinite alternate; }
 .tec.voo-rapel .tec__perna--d { animation: tec-passo .25s ease-in-out infinite alternate-reverse; }
 
+
+/* ---------- Fundo 3D (v4.1): teclado infinito atrás da página (fundo3d.js) ---------- */
+.fundo3d { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; image-rendering: auto; }
